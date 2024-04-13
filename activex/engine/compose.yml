@@ -1,0 +1,36 @@
+version: '3'
+
+services:
+  mongodb:
+    image: mongo:4.4.6
+    networks:
+      - oca
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=root
+    ports:
+      - "27017:27017"
+      - "9229:9229"
+    volumes:
+      - db-data:/data/db
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    networks:
+      - oca
+    ports:
+      - "8111:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=root
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=root
+    depends_on:
+      - mongodb
+
+volumes:
+  db-data:
+
+networks:
+  oca:
+    attachable: true
