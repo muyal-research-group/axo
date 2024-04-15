@@ -4,12 +4,20 @@ version = "0.1.0"
 description = ""
 authors = ["Ignacio Castillo <ignacio.bcastillo@gmail.com>"]
 readme = "README.md"
-package-mode = false
+
 [tool.poetry.dependencies]
 python = "^3.8"
 cloudpickle = "^3.0.0"
+option = "^2.1.0"
+pymongo = "^4.6.3"
+nanoid = "^2.0.0"
 
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[[tool.poetry.source]]
+name = "test"
+url = "https://test.pypi.org/simple/"
+priority = "supplemental"
