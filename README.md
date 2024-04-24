@@ -12,32 +12,68 @@
 <!-- #  MictlanX  -->
 **ActiveX** is a prototype active object system for intensive application. For now the source code is kept private, and it is for the exclusive use of the *Muyal-ilal* research group. 
 
+## Prerequisites 🧾
+
+- Install [Poetry](https://python-poetry.org/)
+- Install Docker for your OS
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
 
 ## Getting started 🚀
+
+Following the next steps to run the example a simple calculator.
 
 ```python
 from activex.activex import ActiveX
 from activex.activex.decorators import activex
 from typing import List
 
-class Observatory(ActiveX):
-    
-    def __init__(self,obid:str):
-        self.obid = obid
-        self.products:List[str] = []
+class Calculator(ActiveX):
+    def __init__(self):
+      self.records:List[str] =[]
 
     @activex
-    def add_product(self,pid:str)->None:
-        self.products.append(pid)
+    def add(self,x:int,y:int):
+      res = x+y
+      self.records.append("Add {} + {} = {}".format(x,y,res))
+      return res
 
-o = Observatory(obid="observatory123")
+# It is very important to call the activex handler
+_ = ActiveXHandler.local()
+calc = Calculator()
+# Do some operations
+res = calc.add(10,10) # -> 20
+# Save the object
+calc.persistify()
 ```
 
 
+## Steps 
+### Step 1. Deploy MictlanX
+```
+./run_mictlanx.sh
+```
+Once all services are up  and running execute the next bash script
+```
+./ini_peers.sh && ./peers_status.sh
+```
 
-<p align="right">(<a href="#top">back to top</a>)</p>
+### Step 2. Init the virtualenviroment and install
 
-## Prerequisites 🧾
+```bash
+poetry shell && poetry install
+```
+### Step 3. Run examples
+
+Put a new object in MictlanX
+```bash
+python3 examples/01_put_calculator.py mycalculator01
+```
+Get a object from MictlanX and use it in ActiveX
+```bash
+python3 examples/02_get_calculator.py mycalculator01
+```
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
