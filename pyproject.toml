@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "activex"
-version = "0.1.0"
+version = "0.0.2"
 description = ""
 authors = ["Ignacio Castillo <ignacio.bcastillo@gmail.com>"]
 readme = "README.md"
@@ -11,7 +11,14 @@ cloudpickle = "^3.0.0"
 option = "^2.1.0"
 pymongo = "^4.6.3"
 nanoid = "^2.0.0"
+mictlanx = "^0.0.131"
+pydantic = "^2.7.0"
+zmq = "^0.0.0"
 
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.1.1"
+more-itertools = "^10.2.0"
 
 [build-system]
 requires = ["poetry-core"]
