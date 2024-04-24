@@ -1,0 +1,116 @@
+version: "3.8"
+services:
+  mictlanx-router-0:
+      image: nachocode/mictlanx:router
+      container_name:  mictlanx-router-0
+      ports:
+        - 60666:60666
+      environment:
+        - LOGGER_NAME=mictlanx-router-0
+        - LOG_PATH=/log
+        - TEZCANALYTICX_FLUSH_TIMEOUT=10s
+        - TEZCANALYTICX_BUFFER_SIZE=100
+        - TEZCANALYTICX_PATH=/api/v4/events
+        - TEZCANALYTICX_PORT=45000
+        - TEZCANALYTICX_HOSTNAME=tezcanalyticx-0
+        - TEZCANALYTICX_LEVEL=0
+        - TEZCANALYTICX_PROTOCOL=http
+        - TEZCANALYTICX_ENABLE=0
+        - MICTLANX_PEERS=mictlanx-peer-0:mictlanx-peer-0:7000 mictlanx-peer-1:mictlanx-peer-1:7001 mictlanx-peer-2:mictlanx-peer-2:7002
+        - MICTLANX_PROCOTOL=http
+        - MICTLANX_API_VERSION=4
+        - MICTLANX_PEER_HEALER_HEARTBEAT=30sec
+        - MICTLANX_GC_HEARTBEAT=60sec
+      volumes:
+        - mictlanx-router-0_logs:/log
+      networks:
+        - mictlanx
+      restart: always
+      depends_on:
+        - mictlanx-peer-0
+        - mictlanx-peer-1
+  mictlanx-peer-0:
+    image: nachocode/mictlanx:peer
+    container_name: mictlanx-peer-0
+    hostname: mictlanx-peer-0
+    ports:
+      - 7000:7000
+    environment:
+      - USER_ID=1001
+      - GROUP_ID=1002
+      - BIN_NAME=peer
+      - NODE_ID=mictlanx-peer-0
+      - NODE_PORT=7000
+      - IP_ADDRESS=mictlanx-peer-0
+      - SERVER_IP_ADDR=0.0.0.0
+      - NODE_DISK_CAPACITY=10000000000
+      - NODE_MEMORY_CAPACITY=1000000000
+      - BASE_PATH=/mictlanx
+      - LOCAL_PATH=/mictlanx/local
+      - DATA_PATH=/mictlanx/data
+      - LOG_PATH=/mictlanx/log
+      - WORKERS=2
+      - MIN_INTERVAL_TIME=15
+      - MAX_INTERVAL_TIME=20
+      - PAYLOAD_LIMIT=25600000000
+      - CLIENT_REQUEST_TIMEOUT=300
+      - CLIENT_DISCONNECT_TIMEOUT=60
+      - AGENT_UNIX_SOCKET_PATH=/mictlanx/mictlanx.sock
+      - CLEAN_CACHE=false
+    volumes:
+      - mictlanxpeer0:/mictlanx
+      # - /mictlanx/mictlanx-peer-0/log:/mictlanx/log
+      # - /mictlanx/mictlanx-peer-0/local:/mictlanx/local
+      # - /mictlanx/mictlanx-peer-0/data:/mictlanx/data
+      # - /mictlanx/mictlanx-peer-0/mictlanx.sock:/mictlanx/mictlanx.sock
+    networks:
+      - mictlanx
+    restart: always
+  mictlanx-peer-1:
+    image: nachocode/mictlanx:peer
+    container_name: mictlanx-peer-1
+    hostname: mictlanx-peer-1
+    ports:
+      - 7001:7001
+    environment:
+      - USER_ID=1001
+      - GROUP_ID=1002
+      - BIN_NAME=peer
+      - NODE_ID=mictlanx-peer-1
+      - NODE_PORT=7001
+      - IP_ADDRESS=mictlanx-peer-1
+      - SERVER_IP_ADDR=0.0.0.0
+      - NODE_DISK_CAPACITY=10000000000
+      - NODE_MEMORY_CAPACITY=1000000000
+      - PEERS=mictlanx-peer-0:7000
+      - BASE_PATH=/mictlanx
+      - LOCAL_PATH=/mictlanx/local
+      - DATA_PATH=/mictlanx/data
+      - LOG_PATH=/mictlanx/log
+      - WORKERS=2
+      - MIN_INTERVAL_TIME=10
+      - MAX_INTERVAL_TIME=20
+      - PAYLOAD_LIMIT=25600000000
+      - CLIENT_REQUEST_TIMEOUT=300
+      - CLIENT_DISCONNECT_TIMEOUT=60
+      - AGENT_UNIX_SOCKET_PATH=/mictlanx/mictlanx.sock
+      - CLEAN_CACHE=false
+    volumes:
+      - mictlanxpeer1:/mictlanx
+    networks:
+      - mictlanx
+    restart: always
+
+     
+volumes:
+  mictlanx-router-0_logs:
+  mictlanxpeer0:
+  mictlanxpeer1:
+networks:
+  mictlanx:
+    external: true
+
+
+  
+
+
