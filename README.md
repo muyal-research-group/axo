@@ -15,6 +15,10 @@
 ## Prerequisites 🧾
 
 - Install [Poetry](https://python-poetry.org/)
+- Install Pip dependencies
+  ```bash
+  pip3 install -r requirements.txt
+  ```
 - Install Docker for your OS
 
 <p align="right">(<a href="#top">back to top</a>)</p>
