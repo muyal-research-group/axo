@@ -3,6 +3,8 @@ from activex import ActiveX, activex
 import numpy.typing as npt
 import numpy as np
 from typing import Optional,Tuple
+from typing_extensions import Annotated
+from activex.storage.mictlanx import GetKey
 import random
 import math
 
@@ -10,7 +12,6 @@ OptionalFloat = Optional[float]
 OptionalNDArray = Optional[npt.NDArray]
 
 class Perceptron(ActiveX):
-
     #Initialization
     def __init__(self, learning_rate=0.01, activation=None, epochs=100):
         self.n = learning_rate
@@ -21,9 +22,13 @@ class Perceptron(ActiveX):
             activation=lambda x: math.tanh(x)
             self.activation =activation
         self.w=None
+    
 
+
+    def save_model(self,filename:str="perceptronmodel.npy"):
+        with open("/sink/{}".format(filename), "wb") as f:
+            np.save(f, np.array(self.w))
     #Training Method
-    @activex
     def fit(self, xTrain:list, yTrain:list):
         #How many weigths?
         self.w = self.__generarPesos(len(xTrain[0])+1)
@@ -34,7 +39,6 @@ class Perceptron(ActiveX):
             self.w = self.__actualizarPesos(deltaW) # Update Weigths
         return self.w
     #Prediction Method
-    @activex
     def predict(self, dataSet: list):
         predicciones = []
 
@@ -45,14 +49,12 @@ class Perceptron(ActiveX):
         return predicciones
 
 ######################## Métodos auxiliares ########################
-    @activex
     def __predictVector(self, vector: list):
         vectorX0 = self.__addX0(vector)
 
         resultado = self.__funcionActivacion(self.__productoPunto(self.w,vectorX0))
         return resultado
 
-    @activex
     def __generarPesos(self, longitud: int, seed=1):
         random.seed(seed)
         w = []
@@ -60,7 +62,6 @@ class Perceptron(ActiveX):
             w.append(random.uniform(-1,1))
         return w
 
-    @activex
     def __funcionActivacion(self, yValue: float):
         evaluacion = self.activation(yValue)
         #evaluacion =math.ceil(evaluacion)
@@ -69,12 +70,10 @@ class Perceptron(ActiveX):
         else:
             return 1
 
-    @activex
     def __productoPunto(self, w: list, x: list):
         resultado = np.dot(w, x)
         return resultado
 
-    @activex
     def __aprendizaje(self, x: list, y: list):
         deltaW = []
         for i in range(len(self.w)):
@@ -86,14 +85,12 @@ class Perceptron(ActiveX):
             deltaW.append(wi)
         return deltaW
 
-    @activex
     def __actualizarPesos(self, deltaW: list):
         resultado = []
         for i in range(len(self.w)):
             resultado.append(self.w[i]+deltaW[i])
         return resultado
 
-    @activex
     def __addX0(self, xi):
         xiX0 = xi.copy()
 
@@ -102,14 +99,12 @@ class Perceptron(ActiveX):
 
         return xiX0
 
-    @activex
     def __fillX(self, x):
         xFilled = []
         for i in range(len(x)):
             xFilled.append(self.__addX0(x[i]))
         return xFilled
 
-    @activex
     def obtenerX(self, dataSet: list):
         x = []
         for i in range(len(dataSet)):
@@ -119,7 +114,6 @@ class Perceptron(ActiveX):
             x.append(vX)
         return x
 
-    @activex
     def obtenerY(self, dataSet: list):
         y = []
         for i in range(len(dataSet)):
@@ -131,10 +125,13 @@ class Calculator(ActiveX):
         add(float,float): Add two float numbers
         substract(float,float): Substract two float numbers
     """
+    # key:Annotated[str, GetKey] 
+    
     def __init__(self,x:float=0,y:float=1):
         self.example_id = "02"
         self.x=x
         self.y=y
+        # self.key = "MY_KEY"
         
     
     def check_xy(self,x:OptionalFloat,y:OptionalFloat)->Tuple[float,float]:
