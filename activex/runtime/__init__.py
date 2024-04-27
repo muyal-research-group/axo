@@ -5,7 +5,7 @@ from contextlib import contextmanager
 if TYPE_CHECKING:
     from activex.runtime.local import LocalRuntime
     from activex.runtime.distributed import DistributedRuntime
-
+    from activex.runtime.runtime import Task,Scheduler,ActiveXScheduler
 
 context_var = contextvars.ContextVar("current_session")
 current_runtime: Union['LocalRuntime','DistributedRuntime', None] = None

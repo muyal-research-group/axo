@@ -6,6 +6,7 @@ from mictlanx.utils.index import Utils
 from mictlanx.v4.interfaces.responses import PutResponse,GetBytesResponse
 from option import Result,Err,Ok
 from nanoid import generate as nanoid
+from typing import Dict
 import time as T
 import string
 
@@ -25,6 +26,14 @@ class StorageService(ABC):
     @abstractmethod
     def get(self,key:str)->Result[ActiveX, Exception]:
         pass
+    
+    @abstractmethod
+    def get_data_to_file(self,key:str,filename:str="",output_path:str="/activex/data")->Result[str, Exception]:
+        pass
+    @abstractmethod
+    def put_data_from_file(self,key:str,source_path:str,tags:Dict[str,str]={},chunk_size:str="1MB")->Result[bool, Exception]:
+        pass
+
 
 class LocalStorageService(StorageService):
     def __init__(self, storage_service_id: str):
@@ -55,7 +64,7 @@ class LocalStorageService(StorageService):
 class MictlanXStorageService(StorageService):
     def __init__(self):
         super().__init__(storage_service_id="MictlanX")
-        NODE_ID = os.environ.get("NODE_ID","activex")
+        NODE_ID = os.environ.get("MICTLANX_ID","activex")
         BUCKET_ID       = os.environ.get("MICTLANX_BUCKET_ID",NODE_ID)
         routers_str = os.environ.get("MICTLANX_ROUTERS","mictlanx-router-0:localhost:60666")
         MICTLANX_PROTOCOL  = os.environ.get("MICTLANX_PROTOCOL","http")
@@ -64,7 +73,7 @@ class MictlanXStorageService(StorageService):
 
         self.client =  Client(
             # Unique identifier of the client
-            client_id   = os.environ.get("MICTLANX_CLIENT_ID","client-0"),
+            client_id   = os.environ.get("MICTLANX_CLIENT_ID",NODE_ID),
             # Storage peers
             routers     = routers,
             # Number of threads to perform I/O operations
@@ -100,3 +109,16 @@ class MictlanXStorageService(StorageService):
             return Err(Exception("{} not found".format(key)))
         response:GetBytesResponse = result.unwrap()
         return Ok(ActiveX.from_bytes(response.value))
+    def get_data_to_file(self, key: str,bucket_id:str="",filename:str="",output_path:str="/activex/data",chunk_size:str="1MB") -> Result[str, Exception]:
+        try:
+            return self.client.get_to_file(key=key,bucket_id=bucket_id,filename=filename,output_path=output_path,chunk_size=chunk_size)
+        except Exception as e:
+            return Err(e)
+    def put_data_from_file(self,source_path: str,key: str="",bucket_id:str="", tags: Dict[str, str]={},chunk_size:str="1MB") -> Result[bool, Exception]:
+        try:
+            result = self.client.put_file_chunked(path=source_path,key=key,chunk_size=chunk_size,bucket_id=bucket_id,tags=tags)
+            return Ok(result.is_ok)
+        except Exception as e:
+            return Err(e)
+        # return super().put_data_from_file(key, source_path, tags)
+        # return super().get_data_to_file(key)

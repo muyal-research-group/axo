@@ -1,12 +1,16 @@
 from abc import ABC,abstractmethod
-from typing import Optional
+from typing import Optional,Dict,List
 from nanoid import generate as nanoid
 import string
 from weakref import WeakKeyDictionary
 from activex.storage.metadata import MetadataService
 from activex.storage.data import StorageService,ActiveX
+from activex.scheduler import Scheduler,Task
 from option import Result
+from queue import Queue
+from threading import Thread
 import logging
+import time as T
 
 logger = logging.getLogger(__name__)
 console_handler = logging.StreamHandler()
@@ -17,15 +21,26 @@ logger.setLevel(logging.DEBUG)
 
 ALPHABET = string.digits+string.ascii_lowercase
 
-
-
-class ActiveXRuntime(ABC):
-    def __init__(self,metadata_service:MetadataService,storage_service:StorageService, runtime_id:str, is_distributed:bool = False ):
-        self.runtime_id = runtime_id if len(runtime_id) > 16 else nanoid(alphabet=ALPHABET)
+class ActiveXRuntime(ABC,Thread):
+    def __init__(self,
+                 q:Queue,
+                 metadata_service:MetadataService,
+                 storage_service:StorageService,
+                 scheduler:Scheduler,
+                 runtime_id:str,
+                 is_distributed:bool = False ,
+    ):
+        Thread.__init__(self,daemon=True, name="activex-runtime")
+        self.runtime_id          = runtime_id if len(runtime_id) > 16 else nanoid(alphabet=ALPHABET)
         self.is_distributed:bool = is_distributed
-        self.inmemory_objects = WeakKeyDictionary()
-        self.metadata_service = metadata_service
-        self.storage_service = storage_service
+        self.inmemory_objects    = WeakKeyDictionary()
+        self.remote_files        = set()
+        self.metadata_service    = metadata_service
+        self.storage_service     = storage_service
+        self.q                   = q
+        self.scheduler:Scheduler = scheduler
+        self.is_running = True
+        self.start()
     
     def get_by_key(self,key:str)->Result[ActiveX,Exception]:
         return self.storage_service.get(key=key)
@@ -48,4 +63,19 @@ class ActiveXRuntime(ABC):
     @abstractmethod
     def stop(self):
         pass
+    def run(self) -> None:
+        while self.is_running:
+            task:Task = self.q.get()
+            current_time = T.time()
+            logger.debug("TASK.DEQUEUE {}".format(task.id))
+            if current_time >= task.executes_at:
+                path   = task.metadata.get("path","")
+                if task.operation == "PUT" and not path =="" and not path in self.remote_files:
+                    result = self.storage_service.put_data_from_file(key="",source_path=path,tags={},chunk_size="1MB")
+                    if result.is_ok:
+                        self.remote_files.add(path)
+                    logger.debug("{} {}".format(task.operation, task.id ))
+                elif task.operation == "DROP":
+                    logger.debug("{} {}".format(task.operation, task.id))
+
         

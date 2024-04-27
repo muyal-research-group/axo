@@ -1,16 +1,21 @@
+from __future__ import annotations
+import inspect
 import os
 import string
 import logging
 import re
 import cloudpickle as CP
 from functools import wraps
-from typing_extensions import Annotated
 from nanoid import generate as nanoid 
-from typing import Dict,Optional,ClassVar,Set
+from typing import Dict,Optional,ClassVar,Set,Annotated,get_type_hints
 from pydantic import BaseModel,Field
 from pydantic.functional_validators import AfterValidator
 from activex.runtime import get_runtime
-
+from activex.scheduler import Task
+from activex.storage.mictlanx import GetKey,PutPath
+from pathlib import Path
+import humanfriendly as HF
+import time as T
 ALPHABET = string.ascii_lowercase+string.digits
 ACTIVEX_OBJECT_ID_SIZE = 16
 logger = logging.getLogger(__name__)
@@ -22,10 +27,48 @@ logger.setLevel(logging.DEBUG)
 
 ACX_PROPERTY_PREFIX = "_acx_property_"
 
+ACX_ENQUEUE_EXTRA_SECS = os.environ.get("ACX_ENQUEUE_EXTRA_SECS","1s")
+
+def resolve_annotations(self:ActiveX):
+    runtime = get_runtime()
+    logger.debug("RESOLVE_ANNOTATIONS {}".format(self))
+    # cls = self.__class__
+    attributes = self.__dict__
+    for attr_name, attr_value in attributes.items():
+        # attr_type = type(attr_value)
+        attr_type_hint = self.__annotations__.get(attr_name)
+
+        # Check if the annotated key is GetKey
+        if attr_type_hint == Annotated[str,GetKey]:
+            value = getattr(self,attr_name)
+            logger.debug("GET {}".format(value))
+            result = runtime.storage_service.get_data_to_file(
+                key=value
+            )
+            if result.is_err:
+                logger.error("{} not found in the storage service".format(value))
+                # raise Exception("" .format(value))
+        
+        # Check if the annotated key is PutPath
+        if attr_type_hint == Annotated[str,PutPath]:
+            value = getattr(self,attr_name)
+            task = Task(
+                operation="PUT",
+                executed_at= T.time() + HF.parse_timespan(ACX_ENQUEUE_EXTRA_SECS) ,
+                metadata={
+                    "path":value 
+                } 
+            )
+            # Schedule a put task.
+            runtime.scheduler.schedule(
+                task=task
+            )
+            
+
 def activex(f):
     @wraps(f)
     def __activex(self:ActiveX,*args,**kwargs):
-        runtime = get_runtime()
+        resolve_annotations(self=self)
         logger.debug("is_local=%s", self._acx_local)
         result = f(self,*args,**kwargs)
         return result
@@ -60,9 +103,6 @@ class MetadataX(BaseModel):
     # def generate_id(cls, v):
     #     return v if v is not None else nanoid(ALPHABET, size=ACTIVEX_OBJECT_ID_SIZE)
     
-    
-
-
 class ActiveX:
     _acx_metadata: MetadataX
     _acx_local:bool = True
