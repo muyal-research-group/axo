@@ -3,10 +3,11 @@ from typing import Optional,Dict,List
 from nanoid import generate as nanoid
 import string
 from weakref import WeakKeyDictionary
-from activex.storage.metadata import MetadataService
+# from activex.storage.metadata import MetadataService
 from activex.storage.data import StorageService,ActiveX
+from activex.middleware import MiddlewareX
 from activex.scheduler import Scheduler,Task
-from option import Result
+from option import Result,Err,Ok
 from queue import Queue
 from threading import Thread
 import logging
@@ -24,7 +25,7 @@ ALPHABET = string.digits+string.ascii_lowercase
 class ActiveXRuntime(ABC,Thread):
     def __init__(self,
                  q:Queue,
-                 metadata_service:MetadataService,
+                 middleware:MiddlewareX,
                  storage_service:StorageService,
                  scheduler:Scheduler,
                  runtime_id:str,
@@ -35,7 +36,7 @@ class ActiveXRuntime(ABC,Thread):
         self.is_distributed:bool = is_distributed
         self.inmemory_objects    = WeakKeyDictionary()
         self.remote_files        = set()
-        self.metadata_service    = metadata_service
+        self.middleware          = middleware
         self.storage_service     = storage_service
         self.q                   = q
         self.scheduler:Scheduler = scheduler
@@ -50,14 +51,16 @@ class ActiveXRuntime(ABC,Thread):
             key:Optional[str] = None,
             storage_node:Optional[str] = None
     )->Result[str,Exception]:
-        self.metadata_service.put(
+        m_result = self.middleware.put(
             key=key,
             metadata=instance._acx_metadata
         )
-        self.storage_service.put(
+        s_result = self.storage_service.put(
             obj=instance,
             key=key
         )
+        return Ok(key)
+            
         # logger.debug("%s persistify",key)
 
     @abstractmethod

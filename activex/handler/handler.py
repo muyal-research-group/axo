@@ -17,14 +17,38 @@ class ActiveXHandler:
             self.runtime = runtime
         set_runtime(self.runtime)
         self.is_running = True
+
     @staticmethod
-    def distributed(protocol:str = "tcp",hostname:str="localhost", port:int = 60666)->'ActiveXHandler':
+    def local(
+        # protocol:str = "tcp",
+        # hostname:str="localhost",
+        # port:int = 16666,
+        # req_res_port:int = 16667
+    )->'ActiveXHandler':
+        return ActiveXHandler(
+            runtime= LocalRuntime(
+                runtime_id="local-{}".format(nanoid(alphabet=string.ascii_lowercase+string.digits)),
+                # protocol=protocol,
+                # hostname=hostname,
+                # port=port,
+                # req_res_port = req_res_port
+            )
+        )
+        
+    @staticmethod
+    def distributed(
+        protocol:str = "tcp",
+        hostname:str="localhost",
+        port:int = 16666,
+        req_res_port:int = 16667
+    )->'ActiveXHandler':
         return ActiveXHandler(
             runtime= DistributedRuntime(
                 runtime_id="distributed-{}".format(nanoid(alphabet=string.ascii_lowercase+string.digits)),
                 protocol=protocol,
                 hostname=hostname,
-                port=port
+                port=port,
+                req_res_port = req_res_port
             )
         )
         

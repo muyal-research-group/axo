@@ -1,1 +1,1 @@
-from activex.v1 import ActiveX,activex,MetadataX
+from activex.v1 import ActiveX,activex_method,MetadataX

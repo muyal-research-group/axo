@@ -1,7 +1,7 @@
 from activex.runtime.runtime import ActiveXRuntime
 from activex.scheduler import ActiveXScheduler
 from activex.storage.data import MictlanXStorageService
-from activex.storage.metadata import ActiveXMetadataService
+from activex.middleware import DistributedMiddleware
 import logging
 from queue import Queue
 
@@ -17,16 +17,18 @@ class DistributedRuntime(ActiveXRuntime):
                  protocol:str = "tcp",
                  hostname:str = "127.0.0.1",
                  port:int = 60667,
+                 req_res_port:int = 60667,
                  maxsize:int = 100
     ):
         q = Queue(maxsize=maxsize)
         super().__init__(
             q= q,
             runtime_id=runtime_id,
-            metadata_service=ActiveXMetadataService(
+            middleware=DistributedMiddleware(
                 protocol = protocol,
                 hostname = hostname,
-                port     = port
+                port     = port,
+                req_res_port = req_res_port
             ),
             storage_service=MictlanXStorageService(),
             is_distributed=True,

@@ -3,6 +3,7 @@ services:
   mictlanx-router-0:
       image: nachocode/mictlanx:router
       container_name:  mictlanx-router-0
+      command: uvicorn mictlanxrouter.server:app --host ${MICTLANX_ROUTER_HOST-0.0.0.0} --port ${MICTLANX_ROUTER_PORT-60666}
       ports:
         - 60666:60666
       environment:
@@ -26,6 +27,7 @@ services:
       networks:
         - mictlanx
       restart: always
+
       depends_on:
         - mictlanx-peer-0
         - mictlanx-peer-1

@@ -59,6 +59,11 @@ class LocalStorageService(StorageService):
         with open(path,"rb") as f :
             data = f.read()
             return ActiveX.from_bytes(raw_obj=data)
+    
+    def get_data_to_file(self,key:str,filename:str="",output_path:str="/activex/data")->Result[str, Exception]:
+        return Err(Exception("get_data_to_file not implemented"))
+    def put_data_from_file(self,key:str,source_path:str,tags:Dict[str,str]={},chunk_size:str="1MB")->Result[bool, Exception]:
+        return Err(Exception("put_data_from_file not implemented"))
         # return Err(Exception("Not implemented yet."))
 
 class MictlanXStorageService(StorageService):
@@ -83,19 +88,19 @@ class MictlanXStorageService(StorageService):
             log_output_path= os.environ.get("MICTLANX_LOG_OUTPUT_PATH","./log"),
             bucket_id=BUCKET_ID
         )
-    def put(self,obj:ActiveX,key:str="")->Result[str,Exception]:
+    def put(self,obj:ActiveX,key:str="",chunk_size:str="1MB")->Result[str,Exception]:
         tags = {
                 **obj._acx_metadata.to_json_with_string_values()
         }
-        tags.pop("pivot_storage_node")
-        tags.pop("replica_nodes")
-        future= self.client.put(
-            value= obj.to_bytes(),
+        # tags.pop("pivot_storage_node")
+        # tags.pop("replica_nodes")
+        result= self.client.put_chunked(
+            chunks= obj.to_stream(chunk_size=chunk_size),
             key=key,
             tags=tags
 
         )
-        result:Result[PutResponse,Exception]  = future.result()
+        # result:Result[PutResponse,Exception]  = future.result()
         if result.is_ok:
             response = result.unwrap()
             return Ok(response.key)
@@ -104,11 +109,21 @@ class MictlanXStorageService(StorageService):
         
 
     def get(self,key:str)->Result[ActiveX,Exception]:
-        result:Result[GetBytesResponse,Exception]= self.client.get(key=key).result()
-        if result.is_err:
-            return Err(Exception("{} not found".format(key)))
-        response:GetBytesResponse = result.unwrap()
-        return Ok(ActiveX.from_bytes(response.value))
+        response_size = 0 
+        while response_size ==0:
+            result:Result[GetBytesResponse,Exception]= self.client.get_with_retry(key=key)
+            if result.is_err:
+                return Err(Exception("{} not found".format(key)))
+            response:GetBytesResponse = result.unwrap()
+            response_size = len(response.value)
+            if response_size ==0:
+                logger.warning({
+                    "event":"EMPTY.RESPONSE",
+                    "key":key,
+                    "response_size":response_size
+                })
+                continue
+            return Ok(ActiveX.from_bytes(response.value))
     def get_data_to_file(self, key: str,bucket_id:str="",filename:str="",output_path:str="/activex/data",chunk_size:str="1MB") -> Result[str, Exception]:
         try:
             return self.client.get_to_file(key=key,bucket_id=bucket_id,filename=filename,output_path=output_path,chunk_size=chunk_size)

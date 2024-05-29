@@ -4,7 +4,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from typing_extensions import Annotated
-from activex import ActiveX,activex
+from activex import ActiveX,activex_method
 from activex.storage.mictlanx import GetKey,PutPath
 
 class HeatmapProducer(ActiveX):
@@ -26,7 +26,7 @@ class HeatmapProducer(ActiveX):
         self.heatmap_output_path = output_path
 
 
-    @activex
+    @activex_method
     def plot(self,cas:str):
         df = self.df
         sustancia_nombre = df["sustancia"].iloc[0]

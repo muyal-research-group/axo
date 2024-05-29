@@ -1,6 +1,6 @@
 from activex.runtime.runtime import ActiveXRuntime
 from activex.scheduler import ActiveXScheduler
-from activex.storage.metadata import LocalMetadataService
+from activex.middleware import LocalMiddleware
 from activex.storage.data import LocalStorageService
 import logging
 from queue import Queue
@@ -20,7 +20,7 @@ class LocalRuntime(ActiveXRuntime):
         q= Queue(maxsize= maxsize)
         super().__init__(
             q=q,
-            metadata_service=LocalMetadataService(),
+            middleware=LocalMiddleware(),
             storage_service=LocalStorageService(storage_service_id="local-store"),
             scheduler= ActiveXScheduler(
                 tasks=[], 

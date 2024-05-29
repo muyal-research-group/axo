@@ -1,4 +1,4 @@
-from activex import ActiveX, activex
+from activex import ActiveX, activex_method
 
 import numpy.typing as npt
 import numpy as np
@@ -119,6 +119,7 @@ class Perceptron(ActiveX):
         for i in range(len(dataSet)):
                 y.append(dataSet[i][-1])
         return y
+
 class Calculator(ActiveX):
     """
         Calculator:
@@ -146,26 +147,32 @@ class Calculator(ActiveX):
 
         return _x,_y        
 
-    @activex
+    @activex_method
     def add(self,x:OptionalFloat=None,y:OptionalFloat=None):
         _x,_y = self.check_xy(x,y)
         return _x + _y
-    @activex
+    
+    @activex_method
     def substract(self,x:OptionalFloat=None,y:OptionalFloat=None):
         _x,_y = self.check_xy(x,y)
         return _x - _y
 
-    @activex
+    @activex_method
     def multiply(self,x:OptionalFloat=None,y:OptionalFloat=None):
         _x,_y = self.check_xy(x,y)
         return _x * _y
-    @activex
+    
+    @activex_method
+    def eloy_fybctuib():
+        pass
+
+    @activex_method
     def divide(self,x:OptionalFloat=None,y:OptionalFloat=None):
         _x,_y = self.check_xy(x,y)
         if _y == 0:
             raise ZeroDivisionError()
         return _x / _y
-    @activex
+    @activex_method
     def add_vectors(self,x:OptionalNDArray,y:OptionalNDArray):
         if x == None:
             _x = np.array([self.x])
