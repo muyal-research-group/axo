@@ -13,8 +13,9 @@ import numpy.typing as npt
 import time as T
 import os
 import logging
-from .common import Dog,Calculator
+from .common import Dog,Calculator,Cipher
 from dotenv import load_dotenv
+from Crypto.Random import get_random_bytes
 
 ENV_FILE_PATH = os.environ.get("ENV_FILE_PATH",-1)
 if not ENV_FILE_PATH == -1:
@@ -31,7 +32,8 @@ console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 logger.setLevel(logging.DEBUG)
-
+#    key = get_random_bytes(16)  # 16 bytes key for AES-128
+    # aes_cipher = AESCipher(key)
 
 ACTIVEX_DISTRIBUTED_PROTOCOL = os.environ.get("ACTIVEX_DISTRIBUTED_PROTOCOL","tcp")
 ACTIVEX_DISTRIBUTED_HOSTNAME = os.environ.get("ACTIVEX_DISTRIBUTED_HOSTNAME","localhost")
@@ -223,7 +225,58 @@ class ActiveXTest(unittest.TestCase):
         return self.assertIsInstance(obj, ActiveX)
 
     # @unittest.skip("")
-    def test_persistify_obj(self):
+    def test_distributed_context_cipher(self):
+        ahx       = ActiveXHandler.distributed (
+            hostname=ACTIVEX_DISTRIBUTED_HOSTNAME,
+            protocol=ACTIVEX_DISTRIBUTED_PROTOCOL,
+            port=ACTIVEX_DISTRIBUTED_PORT,
+            req_res_port=ACTIVEX_DISTRIBUTED_REQ_RES_PORT
+        )
+
+        key = get_random_bytes(16)  # 16 bytes key for AES-128
+
+        cipher_instance = Cipher()
+        # cipher_instance.get_bucket_id()        
+        cipher_instance.bucket_id="testing"
+
+        cipher_instance.persistify(
+            bucket_id=cipher_instance.bucket_id
+        )
+
+        res = cipher_instance.encrypt(
+            key        = key,
+            plaintext  = b"Hola DANTE y ARMANDO",
+            # args y kwargs
+            bucket_id  = cipher_instance.bucket_id,
+            output_key = "myresult1000"
+        )
+
+        print("CIPHER_ENCRYPT_RESPONSE",res)
+
+        res = cipher_instance.decrypt(
+            ciphertext=res.unwrap_or(b"a"),
+            key=key,
+            bucket_id = cipher_instance.bucket_id,
+            output_key = "decryptedresult3"
+        )
+        print("CIPHER_DECRYPT_RESPONSE",res)
+        # ahx.stop()
+        # _ = ActiveXHandler.local()
+        res_local = cipher_instance.local_encrypt(
+            bucket_id = cipher_instance.bucket_id,
+            output_key="localkeyoutput"
+        )
+        print("RES_LOCAL",res_local)
+
+
+
+
+
+
+        logger.debug("Saved %s successfully", cipher_instance._acx_metadata.id)
+        return self.assertTrue(cipher_instance._acx_remote)
+    @unittest.skip("")
+    def test_distributed_context(self):
         _       = ActiveXHandler.distributed(
             hostname=ACTIVEX_DISTRIBUTED_HOSTNAME,
             protocol=ACTIVEX_DISTRIBUTED_PROTOCOL,
@@ -231,13 +284,26 @@ class ActiveXTest(unittest.TestCase):
             req_res_port=ACTIVEX_DISTRIBUTED_REQ_RES_PORT
         )
         dog_obj = Dog()
-        dog_obj.bark()
+        # First make persistent
         dog_obj.persistify()
+        res = dog_obj.bark(x="WOOF WOOF EN EL PARQUE")
+        print("DOG_RESPONSE",res)
 
         logger.debug("Saved %s successfully", dog_obj._acx_metadata.id)
         return self.assertTrue(dog_obj._acx_remote)
 
 
+    @unittest.skip("")
+    def test_local_context(self):
+        ahx = ActiveXHandler.local()
+
+        dog_obj = Dog()
+        res = dog_obj.bark(x = "Rory")
+        print("BARK_RESPONSE", res)
+        dog_obj.persistify()
+
+
+        
     """
     Create a dog instance and execute the bark method
     """

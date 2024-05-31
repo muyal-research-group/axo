@@ -48,6 +48,7 @@ class ActiveXRuntime(ABC,Thread):
     def persistify(
             self,
             instance: ActiveX,
+            bucket_id:Optional[str] = None,
             key:Optional[str] = None,
             storage_node:Optional[str] = None
     )->Result[str,Exception]:
@@ -57,6 +58,7 @@ class ActiveXRuntime(ABC,Thread):
         )
         s_result = self.storage_service.put(
             obj=instance,
+            bucket_id=bucket_id,
             key=key
         )
         return Ok(key)

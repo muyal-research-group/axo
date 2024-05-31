@@ -75,6 +75,7 @@ def resolve_annotations(self:ActiveX):
             
 
 def activex_method(f):
+    
     @wraps(f)
     def __activex(self:ActiveX,*args,**kwargs):
         try:
@@ -135,6 +136,9 @@ class ActiveX:
     _acx_local:bool = True
     _acx_remote:bool = False
 
+    def get_bucket_id()->str:
+        pass
+
     def __init_subclass__(cls, **kwargs):
         logger.debug(f"Subclass {cls.__name__} created.")
 
@@ -183,11 +187,11 @@ class ActiveX:
     def get_by_key(key:str):
         return get_runtime().get_by_key(key)
 
-    def persistify(self,key:str="")->Result[str, Exception]:
+    def persistify(self,bucket_id:str="",key:str="")->Result[str, Exception]:
         try:
             _key = self._acx_metadata.id if key == "" else key
             runtime = get_runtime()
-            persistify_result = runtime.persistify(self,key=_key)
+            persistify_result = runtime.persistify(self,bucket_id=bucket_id,key=_key)
             self._acx_remote = persistify_result.is_ok
             return persistify_result
         except Exception as e:
