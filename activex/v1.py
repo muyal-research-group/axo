@@ -7,7 +7,7 @@ import re
 import cloudpickle as CP
 from functools import wraps
 from nanoid import generate as nanoid 
-from typing import Dict,Optional,ClassVar,Set,Annotated,Generator
+from typing import Dict,Optional,ClassVar,Set,Annotated,Generator,List
 from pydantic import BaseModel,Field
 from pydantic.functional_validators import AfterValidator
 from activex.runtime import get_runtime
@@ -75,15 +75,16 @@ def resolve_annotations(self:ActiveX):
             
 
 def activex_method(f):
-    
+
     @wraps(f)
     def __activex(self:ActiveX,*args,**kwargs):
         try:
             # resolve_annotations(self=self)
             runtime = get_runtime()
             logger.debug("is_local=%s", self._acx_local)
-
-            res = runtime.middleware.method_execution(
+            endpoint = runtime.endpoint_manager.get_endpoint(endpoint_id= kwargs.get("endpoint_id",""))
+            kwargs["endpoint_id"] = endpoint.endpoint_id
+            res = endpoint.method_execution(
                 key=self._acx_metadata.id,
                 fname=f.__name__,
                 ao=self,
@@ -101,11 +102,18 @@ def activex_method(f):
 
 def generate_id(v:str)->str:
     if v == None or v == "":
-        return nanoid(ALPHABET, size=ACTIVEX_OBJECT_ID_SIZE)
-    return re.sub(r'[^\w\s]', '', v)
+        return nanoid(alphabet=ALPHABET, size=ACTIVEX_OBJECT_ID_SIZE)
+    return re.sub(r'[^a-z0-9_]', '', v)
+def generate_id_size(size:int=ACTIVEX_OBJECT_ID_SIZE):
+    def __in(v:str)->str:
+        if v == None or v == "":
+            return nanoid(alphabet=ALPHABET, size=size)
+        return re.sub(r'[^a-z0-9_]', '', v)
+    return __in
+    # return generate_id(v=)
 
 
-ActiveXObjectId = Annotated[Optional[str], AfterValidator(generate_id)]
+ActiveXObjectId = Annotated[Optional[str], AfterValidator(generate_id_size(ACTIVEX_OBJECT_ID_SIZE))]
 
 class MetadataX(BaseModel):
     path:ClassVar[str]               = os.environ.get("ACTIVE_LOCAL_PATH","/activex")
@@ -117,13 +125,21 @@ class MetadataX(BaseModel):
     name:str
     class_name:str 
     version:str                       = "v0"
+    source_bucket_id:str  =""
+    sink_bucket_id:str = ""
+    sink_keys:list[str] =[]
+    endpoint_id:str = ""
+    dependencies:list[str]= []
 
     def to_json_with_string_values(self)->Dict[str,str]:
         json_data = self.model_dump()
         # Convert all values to strings
         for key, value in json_data.items():
             # if key == "replica_nodes"
-            json_data[key] = str(value)
+            if isinstance(value, list):
+                json_data[key] = ";".join(value)
+            else:
+                json_data[key] = str(value)
 
         return json_data
 
@@ -135,30 +151,103 @@ class ActiveX:
     _acx_metadata: MetadataX
     _acx_local:bool = True
     _acx_remote:bool = False
+    
+    def get_dependencies(self)->List[str]:
+        return self._acx_metadata.dependencies
+    def set_dependencies(self,dependencies:List[str])->List[str]:
+        self._acx_metadata.dependencies=list(set(dependencies))
+        return self._acx_metadata.dependencies
+    def append_dependencies(self,dependencies:List[str])->List[str]:
+        A = set(dependencies)
+        B = set(self._acx_metadata.dependencies)
+        # self._acx_metadata.dependencies.append(dependencies)
+        self._acx_metadata.dependencies = list(A.union(B))
+        return self._acx_metadata.dependencies
+        # return self._acx_metadata.dependencies
 
-    def get_bucket_id()->str:
-        pass
+    def set_sink_bucket_id(self,sink_bucket_id:str="")->str:
+        self._acx_metadata.sink_bucket_id = generate_id(v = sink_bucket_id)
+        return self._acx_metadata.sink_bucket_id
+    
+    def get_sink_bucket_id(self)->str:
+        if self._acx_metadata.sink_bucket_id == "":
+            return self.set_sink_bucket_id(sink_bucket_id="")
+        return self._acx_metadata.sink_bucket_id
+    
+
+    def set_source_bucket_id(self,source_bucket_id:str="")->str:
+        self._acx_metadata.source_bucket_id = generate_id(v = source_bucket_id)
+        return self._acx_metadata.source_bucket_id
+
+    def get_source_bucket_id(self)->str:
+        if self._acx_metadata.source_bucket_id == "":
+            return self.set_source_bucket_id(source_bucket_id="")
+        return self._acx_metadata.source_bucket_id
+
+    def set_sink_key(self,sink_key:str=""):
+        self._acx_metadata.sink_keys= [generate_id(v= sink_key)]
+        return self._acx_metadata.sink_keys[0]
+    
+    def get_sink_key(self)->str:
+        if len(self._acx_metadata.sink_keys) ==0:
+            return self.set_sink_keys([self._acx_metadata.id])[0]
+        return self._acx_metadata.sink_keys[0]
+    
+    
+    def set_sink_keys(self,keys:List[str])->List[str]:
+        self._acx_metadata.sink_keys=keys.copy()
+        return self._acx_metadata.sink_keys
+    
+    def get_sink_keys(self)->List[str]:
+        if len(self._acx_metadata.sink_keys) == 0:
+            return self.set_sink_keys([ self._acx_metadata.id])
+        return self._acx_metadata.sink_keys
+    
+    def set_endpoint_id(self,endpoint_id:str="")->str:
+        if endpoint_id =="":
+            _endpoint_id = "activex-endpoint-{}".format(generate_id_size(8)(v=endpoint_id))
+        else:
+            _endpoint_id = endpoint_id
+        
+        self._acx_metadata.endpoint_id = _endpoint_id
+        return self._acx_metadata.endpoint_id
+    
+    def get_endpoint_id(self)->str:
+        if self._acx_metadata.endpoint_id =="":
+            return self.set_endpoint_id()
+        return self._acx_metadata.endpoint_id
 
     def __init_subclass__(cls, **kwargs):
-        logger.debug(f"Subclass {cls.__name__} created.")
+        logger.debug({
+            "event":"INIT.SUBCLASS",
+            "class_name":cls.__name__
+        })
+        # logger.debug(f"Subclass {cls.__name__} created.")
+
 
     def __new__(cls,*args,**kwargs):
         obj = super().__new__(cls)
+        class_name = cls.__module__ + "." + cls.__name__
+        module = cls.__module__
+        name = cls.__name__
         obj._acx_metadata = MetadataX(
-            class_name= cls.__module__ + "." + cls.__name__, 
-            module= cls.__module__,
-            name= cls.__name__,
+            class_name= class_name,
+            module= module,
+            name= name,
             id= None
         )
-        #  check runtime
-        logger.debug(
-            # "(%s) New instance %s args=%s kwargs=%s", 
-            "(%s) New instance %s", 
-            obj._acx_metadata.id,
-            cls.__name__,
-            # args,
-            # kwargs
-        )
+        runtime= get_runtime()
+        obj.get_source_bucket_id()
+        obj.get_sink_bucket_id()
+        obj.set_endpoint_id(endpoint_id=runtime.endpoint_manager.get_endpoint().endpoint_id)
+        obj.get_sink_key()
+        obj.get_sink_keys()
+        logger.debug({
+            "event":"NEW",
+            "class_name":cls.__name__,
+            "module":module,
+            # "name":name
+        })
         return obj
 
         
@@ -189,9 +278,12 @@ class ActiveX:
 
     def persistify(self,bucket_id:str="",key:str="")->Result[str, Exception]:
         try:
-            _key = self._acx_metadata.id if key == "" else key
+            _key = self.get_sink_key() if key == "" else key
+            _bucket_id = self.get_sink_bucket_id() if bucket_id =="" else bucket_id
+            # source_bucket_id = self.get_source_bucket_id()
+
             runtime = get_runtime()
-            persistify_result = runtime.persistify(self,bucket_id=bucket_id,key=_key)
+            persistify_result = runtime.persistify(self,bucket_id=_bucket_id,key=_key)
             self._acx_remote = persistify_result.is_ok
             return persistify_result
         except Exception as e:

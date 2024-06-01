@@ -3,6 +3,7 @@ services:
   mictlanx-router-0:
       image: nachocode/mictlanx:router
       container_name:  mictlanx-router-0
+      command: uvicorn mictlanxrouter.server:app --host ${MICTLANX_ROUTER_HOST-0.0.0.0} --port ${MICTLANX_ROUTER_PORT-60666}
       ports:
         - 60666:60666
       environment:
@@ -22,7 +23,7 @@ services:
         - MICTLANX_PEER_HEALER_HEARTBEAT=30sec
         - MICTLANX_GC_HEARTBEAT=60sec
       volumes:
-        - mictlanx-router-0_logs:/log
+        - mictlanx-router-0:/log
       networks:
         - mictlanx
       restart: always
@@ -58,10 +59,7 @@ services:
       - AGENT_UNIX_SOCKET_PATH=/mictlanx/mictlanx.sock
       - CLEAN_CACHE=false
     volumes:
-      - /mictlanx/mictlanx-peer-0/log:/mictlanx/log
-      - /mictlanx/mictlanx-peer-0/local:/mictlanx/local
-      - /mictlanx/mictlanx-peer-0/data:/mictlanx/data
-      - /mictlanx/mictlanx-peer-0/mictlanx.sock:/mictlanx/mictlanx.sock
+      - mictlanx-peer-0:/mictlanx
     networks:
       - mictlanx
     restart: always
@@ -95,55 +93,19 @@ services:
       - AGENT_UNIX_SOCKET_PATH=/mictlanx/mictlanx.sock
       - CLEAN_CACHE=false
     volumes:
-      - /mictlanx/mictlanx-peer-1/log:/mictlanx/log
-      - /mictlanx/mictlanx-peer-1/local:/mictlanx/local
-      - /mictlanx/mictlanx-peer-1/data:/mictlanx/data
-      - /mictlanx/mictlanx-peer-1/mictlanx.sock:/mictlanx/mictlanx.sock
+      - mictlanx-peer-1:/mictlanx
+      # - /mictlanx/mictlanx-peer-1/log:/mictlanx/log
+      # - /mictlanx/mictlanx-peer-1/local:/mictlanx/local
+      # - /mictlanx/mictlanx-peer-1/data:/mictlanx/data
+      # - /mictlanx/mictlanx-peer-1/mictlanx.sock:/mictlanx/mictlanx.sock
     networks:
       - mictlanx
     restart: always
-  mictlanx-peer-2:
-    image: nachocode/mictlanx:peer
-    container_name: mictlanx-peer-2
-    hostname: mictlanx-peer-2
-    # privileged: true
-    ports:
-      - 7002:7002
-    environment:
-      - USER_ID=1001
-      - GROUP_ID=1002
-      - BIN_NAME=peer
-      - NODE_ID=mictlanx-peer-2
-      - NODE_PORT=7002
-      - IP_ADDRESS=mictlanx-peer-2
-      - SERVER_IP_ADDR=0.0.0.0
-      - NODE_DISK_CAPACITY=10000000000
-      - NODE_MEMORY_CAPACITY=1000000000
-      - PEERS=mictlanx-peer-0:7000 mictlanx-peer-1:7001
-      - BASE_PATH=/mictlanx
-      - LOCAL_PATH=/mictlanx/local
-      - DATA_PATH=/mictlanx/data
-      - LOG_PATH=/mictlanx/log
-      - WORKERS=2
-      - MIN_INTERVAL_TIME=10
-      - MAX_INTERVAL_TIME=20
-      - PAYLOAD_LIMIT=25600000000
-      - CLIENT_REQUEST_TIMEOUT=300
-      - CLIENT_DISCONNECT_TIMEOUT=60
-      - AGENT_UNIX_SOCKET_PATH=/mictlanx/mictlanx.sock
-      - CLEAN_CACHE=false
-    volumes:
-      - mictlanx/mictlanx-peer-2/log:/mictlanx/log
-      - mictlanx/mictlanx-peer-2/local:/mictlanx/local
-      - mictlanx/mictlanx-peer-2/data:/mictlanx/data
-      - mictlanx/mictlanx-peer-2/mictlanx.sock:/mictlanx/mictlanx.sock
-    networks:
-      - mictlanx
-    restart: always
-  mictlanx-summoner-0:
+
+  mictlanx-xolo-0:
     image: nachocode/mictlanx:summoner
-    container_name: mictlanx-summoner-0
-    hostname: mictlanx-summoner-0
+    container_name: mictlanx-xolo-0
+    hostname: mictlanx-xolo-0
     privileged: true
     ports:
       - 15000:15000
@@ -153,23 +115,24 @@ services:
       - DOCKER_GID=1001
       - BASE_PATH=/mictlanx
       - BIN_NAME=summoner
-      - NODE_ID=mictlanx-summoner-0
+      - NODE_ID=mictlanx-xolo-0
       - NODE_PORT=15000
-      - IP_ADDRESS=mictlanx-summoner-0
+      - IP_ADDRESS=mictlanx-xolo-0
       - SERVER_IP_ADDR=0.0.0.0
       - LOG_PATH=/mictlanx/log
       - LOCAL_PATH=/mictlanx/local
       - DATA_PATH=/mictlanx/data
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /mictlanx/mictlanx-summoner-0/log:/mictlanx/log
-      - /mictlanx/mictlanx-summoner-0/local:/mictlanx/local
-      - /mictlanx/mictlanx-summoner-0/data:/mictlanx/data
+      - mictlanx-xolo-0:/mictlanx
     networks:
       - mictlanx
      
 volumes:
-  mictlanx-router-0_logs:
+  mictlanx-router-0:
+  mictlanx-peer-0:
+  mictlanx-peer-1:
+  mictlanx-xolo-0:
 networks:
   mictlanx:
     external: true

@@ -5,7 +5,7 @@ import string
 from weakref import WeakKeyDictionary
 # from activex.storage.metadata import MetadataService
 from activex.storage.data import StorageService,ActiveX
-from activex.middleware import MiddlewareX
+from activex.endpoint import EndpointX,XoloEndpointManager
 from activex.scheduler import Scheduler,Task
 from option import Result,Err,Ok
 from queue import Queue
@@ -25,7 +25,7 @@ ALPHABET = string.digits+string.ascii_lowercase
 class ActiveXRuntime(ABC,Thread):
     def __init__(self,
                  q:Queue,
-                 middleware:MiddlewareX,
+                 endpoint_manager:XoloEndpointManager,
                  storage_service:StorageService,
                  scheduler:Scheduler,
                  runtime_id:str,
@@ -36,11 +36,12 @@ class ActiveXRuntime(ABC,Thread):
         self.is_distributed:bool = is_distributed
         self.inmemory_objects    = WeakKeyDictionary()
         self.remote_files        = set()
-        self.middleware          = middleware
+        # self.middleware          = middleware
         self.storage_service     = storage_service
         self.q                   = q
         self.scheduler:Scheduler = scheduler
         self.is_running = True
+        self.endpoint_manager= endpoint_manager
         self.start()
     
     def get_by_key(self,key:str)->Result[ActiveX,Exception]:
@@ -52,7 +53,10 @@ class ActiveXRuntime(ABC,Thread):
             key:Optional[str] = None,
             storage_node:Optional[str] = None
     )->Result[str,Exception]:
-        m_result = self.middleware.put(
+        
+        endpoint = self.endpoint_manager.get_endpoint(endpoint_id=instance.get_endpoint_id())
+        print("ENDPOINT",endpoint)
+        m_result = endpoint.put(
             key=key,
             metadata=instance._acx_metadata
         )

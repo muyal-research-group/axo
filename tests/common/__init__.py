@@ -33,20 +33,20 @@ class Cipher(ActiveX):
         # return b"PLAINTEXT"
     
 class Dog(ActiveX):
-    def __init__(self):
-        self.dog_name = "PERRITO"
-        self.df = pd.DataFrame({
-            "col1":[1],
-            "col2":[2],
-            "col3":[3],
-        })
+    def __init__(self,name:str):
+        self.name =name
+ 
     @activex_method
-    def bark(self, x:str="HOLA")->Result[str, Exception]:
-        return"WOOF "+x
+    def bark(self, name:str="Paco",*args,**kwargs)->Result[str, Exception]:
+        return"{}: Woof woof barking to {}".format(self.name,name)
+    @activex_method
+    def bite(self, name:str="Paco",*args,**kwargs)->Result[str, Exception]:
+        return"{}:  biting {}".format(self.name,name)
+    
 
     @activex_method
     def get_name(self,name:str="PERRITO")->Result[str,Exception]:
-        return "{}-{}".format(self.dog_name,name)
+        return "{}-{}".format(self.name,name)
 
     @activex_method
     def get_df(self, df: pd.DataFrame= pd.DataFrame()):

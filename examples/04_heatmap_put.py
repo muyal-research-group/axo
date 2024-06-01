@@ -1,5 +1,5 @@
 
-from activex.handler import ActiveXHandler
+from activex.handler import ActiveXContextManager
 from activex.runtime import get_runtime
 import logging
 from common import HeatmapProducer
@@ -35,7 +35,7 @@ def main():
     key:str = mit.nth(args, 0, "")
 
     logger.debug("Step 1. init ActiveX object handler")
-    _ = ActiveXHandler.distributed()
+    _ = ActiveXContextManager.distributed()
     logger.debug("Step 1.1 Get the runtime")
     runtime  = get_runtime()
     

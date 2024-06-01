@@ -1,5 +1,5 @@
 
-from activex.handler import ActiveXHandler
+from activex.handler import ActiveXContextManager
 import logging
 from common import HeatmapProducer
 import more_itertools as mit
@@ -34,7 +34,7 @@ def main():
     key:str = mit.nth(args, 0, "")
 
     logger.debug("Step 1. init ActiveX object handler")
-    _ = ActiveXHandler.distributed()
+    _ = ActiveXContextManager.distributed()
     logger.debug("Step 2. create an object instance")
     obj:HeatmapProducer = HeatmapProducer.get_by_key(key=key).unwrap()
     print(obj.df)

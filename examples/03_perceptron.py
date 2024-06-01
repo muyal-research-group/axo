@@ -1,5 +1,5 @@
 
-from activex.handler import ActiveXHandler
+from activex.handler import ActiveXContextManager
 from common import Perceptron
 import logging
 import more_itertools as mit
@@ -34,7 +34,7 @@ def main():
     key:str = mit.nth(args, 0, "calculatorexample02")
 
     logger.debug("Step 1. init ActiveX object handler")
-    _ = ActiveXHandler.distributed()
+    _ = ActiveXContextManager.distributed()
     
     logger.debug("Step 2. create an object instance")
     obj = Perceptron()

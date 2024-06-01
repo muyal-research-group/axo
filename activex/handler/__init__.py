@@ -1,1 +1,1 @@
-from activex.handler.handler import ActiveXHandler
+from activex.handler.handler import ActiveXContextManager

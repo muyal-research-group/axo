@@ -1,4 +1,4 @@
-from activex.handler import ActiveXHandler
+from activex.handler import ActiveXContextManager
 from common import Calculator
 import more_itertools as mit
 import sys
@@ -35,7 +35,7 @@ def main():
     """
     key = mit.nth(args,0,"calculatorexample02") 
     logger.debug("Step 1. init ActiveX object handler")
-    _ = ActiveXHandler.distributed()
+    _ = ActiveXContextManager.distributed()
     logger.debug("Step 2. get an object instance - key={}".format(key))
     obj:Calculator = Calculator.get_by_key(key=key).unwrap()
 
