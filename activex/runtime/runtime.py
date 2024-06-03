@@ -44,8 +44,8 @@ class ActiveXRuntime(ABC,Thread):
         self.endpoint_manager= endpoint_manager
         self.start()
     
-    def get_by_key(self,key:str)->Result[ActiveX,Exception]:
-        return self.storage_service.get(key=key)
+    def get_by_key(self,bucket_id:str,key:str)->Result[ActiveX,Exception]:
+        return self.storage_service.get(key=key,bucket_id=bucket_id)
     def persistify(
             self,
             instance: ActiveX,
@@ -54,8 +54,17 @@ class ActiveXRuntime(ABC,Thread):
             storage_node:Optional[str] = None
     )->Result[str,Exception]:
         
-        endpoint = self.endpoint_manager.get_endpoint(endpoint_id=instance.get_endpoint_id())
-        print("ENDPOINT",endpoint)
+        instance_endpoint_id = instance.get_endpoint_id()
+        endpoint = self.endpoint_manager.get_endpoint(endpoint_id=instance_endpoint_id )
+        logger.debug({
+            "event":"GET.ENDPOINT",
+            "instance_endpoint_id":instance_endpoint_id,
+            "endpoint_id":endpoint.endpoint_id,
+            "hostname":endpoint.hostname,
+            "pubsub_port":endpoint.pubsub_port,
+            "req_res_port":endpoint.req_res_port
+        })
+        # print("ENDPOINT",endpoint)
         m_result = endpoint.put(
             key=key,
             metadata=instance._acx_metadata

@@ -16,7 +16,6 @@ import os
 import logging
 from .common import Dog,Calculator,Cipher
 from dotenv import load_dotenv
-from Crypto.Random import get_random_bytes
 
 ENV_FILE_PATH = os.environ.get("ENV_FILE_PATH",-1)
 if not ENV_FILE_PATH == -1:
@@ -61,6 +60,69 @@ AXO_ENDPOINT_REQ_RES_PORT = int(os.environ.get("AXO_ENDPOINT_REQ_RES_PORT","1666
 class ActiveXTest(unittest.TestCase):
     
     @unittest.skip("")
+    def test_local_context_layer_cipher(self):
+        axcm    = ActiveXContextManager.local()
+        cipher  = Cipher(security_level=128)
+        sk = cipher.key_gen()
+        
+        res =  cipher.encrypt(
+            plaintext=b"Secret data",
+            key= sk
+        )
+
+        logger.debug({
+            "method":"encrypt",
+            "result":res
+        })
+        res = cipher.decrypt(
+            key= sk,
+            ciphertext=res.unwrap()
+        )
+        logger.debug({
+            "method":"decrypt",
+            "result":res
+        })
+        cipher.persistify()
+    
+    # @unittest.skip("")
+    def test_distributed_context_layer_cipher(self):
+        endpoint_manager = XoloEndpointManager()
+        endpoint_manager.add_endpoint(
+            endpoint_id=AXO_ENDPOINT_ID,
+            protocol=AXO_ENDPOINT_PROTOCOL,
+            hostname=AXO_ENDPOINT_HOSTNAME,
+            req_res_port=AXO_ENDPOINT_REQ_RES_PORT,
+            pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
+        )
+
+        ax     = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
+        cipher  = Cipher(security_level=128)
+        sk = cipher.key_gen()
+        
+        cipher.persistify()
+        res =  cipher.encrypt(
+            plaintext=b"Secret data",
+            key= sk,
+            sink_bucket_id = cipher.get_sink_bucket_id()
+        )
+
+        logger.debug({
+            "method":"encryp",
+            "result":res
+        })
+        res = cipher.decrypt(
+            key= sk,
+            ciphertext=res.unwrap(),
+            sink_bucket_id = cipher.get_sink_bucket_id()
+        )
+        logger.debug({
+            "method":"decrypt",
+            "result":res
+        })
+
+
+    # 
+    @unittest.skip("")
     def test_local_context_layer(self):
         ahx = ActiveXContextManager.local()
         dog_obj = Dog(name="Rex")
@@ -72,25 +134,108 @@ class ActiveXTest(unittest.TestCase):
         dog_obj.persistify()
 
 
-    # @unittest.skip("")
+    @unittest.skip("")
     def test_distributed_context_layer(self):
-        endpoint_manager = XoloEndpointManager(endpoints={
-            AXO_ENDPOINT_ID:DistributedEndpoint(
-                endpoint_id=AXO_ENDPOINT_ID,
-                protocol=AXO_ENDPOINT_PROTOCOL,
-                hostname=AXO_ENDPOINT_HOSTNAME,
-                req_res_port=AXO_ENDPOINT_REQ_RES_PORT,
-                pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
-            )
+
+        endpoint_manager = XoloEndpointManager()
+        endpoint_manager.add_endpoint(
+            endpoint_id=AXO_ENDPOINT_ID,
+            protocol=AXO_ENDPOINT_PROTOCOL,
+            hostname=AXO_ENDPOINT_HOSTNAME,
+            req_res_port=AXO_ENDPOINT_REQ_RES_PORT,
+            pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
+        )
+
+        ax     = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
+        dog    = Dog(name="Rex-0")
+        result = dog.persistify()
+        res = dog.bark(
+            name           = "Jesus",
+            dependencies   = ["numpy"],
+            sink_bucket_id = dog.get_sink_bucket_id(),
+        )
+        logger.debug({
+            "result":res,
         })
-        ax               = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
-        while True:
-            dog = Dog(name="Rex")
-            result = dog.persistify()
-            print("ENDPOINTS",dog.get_endpoint_id())
-            T.sleep(10)
-        # return self.assertTrue(result.is_ok)
+
+        # print("BNARK_RES",res)
+        print("_"*50)
+    @unittest.skip("")
+    def test_distributed_context_layer_get(self):
+
+        endpoint_manager = XoloEndpointManager()
+        endpoint_manager.add_endpoint(
+            endpoint_id=AXO_ENDPOINT_ID,
+            protocol=AXO_ENDPOINT_PROTOCOL,
+            hostname=AXO_ENDPOINT_HOSTNAME,
+            req_res_port=AXO_ENDPOINT_REQ_RES_PORT,
+            pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
+        )
+
+        ax     = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
+        bucket_id = "hb2qlc4e1mrmxem3"
+        key = "zlqp1xcjivjmfj83"
+        get_obj_result = ActiveX.get_by_key(bucket_id=bucket_id,key=key)
+        if get_obj_result.is_ok:
+            obj:Dog = get_obj_result.unwrap()
+            res = obj.bark(name="Ignacio",sink_bucket_id = bucket_id)
+            logger.debug({
+                "result":res
+            })
+        else:
+            logger.error({"msg":str(get_obj_result.unwrap_err())})
+
+
+
+
+    @unittest.skip("")
+    def test_distributed_context_layer(self):
+
+        endpoint_manager = XoloEndpointManager()
+        endpoint_manager.add_endpoint(
+            endpoint_id=AXO_ENDPOINT_ID,
+            protocol=AXO_ENDPOINT_PROTOCOL,
+            hostname=AXO_ENDPOINT_HOSTNAME,
+            req_res_port=AXO_ENDPOINT_REQ_RES_PORT,
+            pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
+        )
+
+        ax     = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
+        dog    = Dog(name="Rex-0")
+        result = dog.persistify()
+        res = dog.bark(
+            name           = "Jesus",
+            dependencies   = ["numpy"],
+            sink_bucket_id = dog.get_sink_bucket_id(),
+        )
+        logger.debug({
+            "result":res,
+        })
+
+        # print("BNARK_RES",res)
+        print("_"*50)
         
+
+
+
+
+    @unittest.skip("")
+    def test_distributed_context_layer2(self):
+        endpoint_manager = XoloEndpointManager()
+
+        endpoint_manager.add_endpoint(
+            endpoint_id="activex-endpoint-1",
+            protocol=AXO_ENDPOINT_PROTOCOL,
+            hostname=AXO_ENDPOINT_HOSTNAME,
+            req_res_port=61771,
+            pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
+        )
+
+        ax               = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
+        i = 0 
+        dog = Dog(name="Rex-{}".format(i))
+        res = dog.persistify()
+        print(res)
     @unittest.skip("")
     def test_get_object(self):
        
@@ -200,9 +345,10 @@ class ActiveXTest(unittest.TestCase):
         })
       
 
-        key = get_random_bytes(16)  # 16 bytes key for AES-128
+        # get_random_bytes(16)  # 16 bytes key for AES-128
 
         cipher_instance = Cipher()
+        key = cipher_instance.key_gen()
 
         cipher_instance.persistify()
         

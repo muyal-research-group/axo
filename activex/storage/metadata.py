@@ -33,7 +33,7 @@ class LocalMetadataService(MetadataService):
         
     def put(self, key: str, metadata: MetadataX):
         logger.debug("PUT.METADATA %s", key)
-        print(metadata.model_dump_json(indent=4))
+        # print(metadata.model_dump_json(indent=4))
         return Err(Exception("Not implemented"))
 
     def get(self, key: str):
@@ -60,9 +60,14 @@ class ActiveXMetadataService(MetadataService):
                 x = self.reqres_socket.send_multipart([b"activex",b"PING",b"{}"],track=True)
                 y = self.reqres_socket.recv_multipart()
             except zmq.error.Again as e:
-                print("ERROR",e)
+                logger.error({
+                    "msg":str(e)
+                })
+                # print("ERROR",e)
             except Exception as e:
-                print("EXPETION",e)
+                logger.error({
+                    "msg":str(e)
+                })
             logger.debug("ActiveX metadata service connected successfully.. %s",full_uri)
             #_________________________________ 
 

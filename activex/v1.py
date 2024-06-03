@@ -35,12 +35,12 @@ def resolve_annotations(self:ActiveX):
     logger.debug("RESOLVE_ANNOTATIONS {}".format(self))
     # cls = self.__class__
     attributes = self.__dict__
-    print(attributes)
+    # print(attributes)
     T.sleep(2)
     for attr_name, attr_value in attributes.items():
         # attr_type = type(attr_value)
         attr_type_hint = self.__annotations__.get(attr_name)
-        print("ATTR_TYPE",attr_type_hint)
+        # print("ATTR_TYPE",attr_type_hint)
         # Check if the annotated key is GetKey
         T.sleep(2)
         if attr_type_hint == Annotated[str,GetKey]:
@@ -273,8 +273,8 @@ class ActiveX:
         return CP.loads(raw_obj)
     
     @staticmethod
-    def get_by_key(key:str):
-        return get_runtime().get_by_key(key)
+    def get_by_key(key:str,bucket_id:str="")->Result[ActiveX,Exception]:
+        return get_runtime().get_by_key(key=key,bucket_id=bucket_id)
 
     def persistify(self,bucket_id:str="",key:str="")->Result[str, Exception]:
         try:

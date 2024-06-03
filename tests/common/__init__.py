@@ -5,15 +5,19 @@ import pandas as pd
 from option import Result,Ok
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
+import datetime as DT
+from Crypto.Random import get_random_bytes
 # import base64
 
 class Cipher(ActiveX):
 
-    def __init__(self,security_level:int=128,bucket_id:str="activex",output_key:str="test"):
+    def __init__(self,security_level:int=128):
         self.security_level = security_level
-        self.bucket_id = bucket_id
-        self.output_key=output_key
+        # self.bucket_id = bucket_id
+        # self.output_key=output_key
 
+    def key_gen(self)->bytes:
+        return get_random_bytes(16)  # 16 bytes key for AES-128
     @activex_method
     def encrypt(self,plaintext:bytes,key:bytes,*args,**kwargs)->bytes:
         cipher = AES.new(key, AES.MODE_CBC)
@@ -27,10 +31,6 @@ class Cipher(ActiveX):
         cipher = AES.new(key, AES.MODE_CBC, iv)
         plaintext = unpad(cipher.decrypt(ciphertext[AES.block_size:]), AES.block_size)
         return plaintext
-    @activex_method
-    def local_encrypt(self,*args,**kwargs):
-        return "LOCAL_ARMANDO_PREGUNTON"
-        # return b"PLAINTEXT"
     
 class Dog(ActiveX):
     def __init__(self,name:str):
@@ -38,7 +38,9 @@ class Dog(ActiveX):
  
     @activex_method
     def bark(self, name:str="Paco",*args,**kwargs)->Result[str, Exception]:
-        return"{}: Woof woof barking to {}".format(self.name,name)
+        dt = DT.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # endpoint_id = self.get_endpoint_id()
+        return"{}: Woof woof barking to {} at {}".format(self.name,name,dt )
     @activex_method
     def bite(self, name:str="Paco",*args,**kwargs)->Result[str, Exception]:
         return"{}:  biting {}".format(self.name,name)
