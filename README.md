@@ -14,7 +14,7 @@
 
 
 <p align="center">
-  <img width="600" src="./assets/activex_01.png" />
+  <img width="750" src="./assets/activex_01.png" />
 </p>
 
 
