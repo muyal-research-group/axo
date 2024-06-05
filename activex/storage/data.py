@@ -3,8 +3,9 @@ import logging
 from activex import ActiveX
 from mictlanx.v4.client import Client
 from mictlanx.utils.index import Utils
+from mictlanx.logger.tezcanalyticx.tezcanalyticx import TezcanalyticXHttpHandler,TezcanalyticXParams
 from mictlanx.v4.interfaces.responses import PutResponse,GetBytesResponse
-from option import Result,Err,Ok
+from option import Result,Err,Ok,Some,NONE,Option
 from nanoid import generate as nanoid
 from typing import Dict
 import time as T
@@ -69,7 +70,7 @@ class LocalStorageService(StorageService):
 class AWSS3(StorageService):
     pass
 class MictlanXStorageService(StorageService):
-    def __init__(self):
+    def __init__(self, tezcanalyticx_params:Option[TezcanalyticXParams] = NONE):
         super().__init__(storage_service_id="MictlanX")
         NODE_ID = os.environ.get("MICTLANX_ID","activex")
         BUCKET_ID       = os.environ.get("MICTLANX_BUCKET_ID",NODE_ID)
@@ -88,7 +89,8 @@ class MictlanXStorageService(StorageService):
             # This parameters are optionals only set to True if you want to see some basic metrics ( this options increase little bit the overhead please take into account).
             debug       = True,
             log_output_path= os.environ.get("MICTLANX_LOG_OUTPUT_PATH","./log"),
-            bucket_id=BUCKET_ID
+            bucket_id=BUCKET_ID,
+            tezcanalyticx_params=tezcanalyticx_params
         )
     def put(self,obj:ActiveX,key:str="",bucket_id:str="",chunk_size:str="1MB")->Result[str,Exception]:
         tags = {

@@ -2,6 +2,8 @@ from activex.runtime.runtime import ActiveXRuntime
 from activex.scheduler import ActiveXScheduler
 from activex.storage.data import MictlanXStorageService
 from activex.endpoint import DistributedEndpoint,XoloEndpointManager
+from option import Option,NONE
+from mictlanx.logger.tezcanalyticx.tezcanalyticx import TezcanalyticXParams
 import logging
 from queue import Queue
 
@@ -15,10 +17,7 @@ class DistributedRuntime(ActiveXRuntime):
     def __init__(self, 
                  runtime_id: str,
                  endpoint_manager:XoloEndpointManager=XoloEndpointManager(), 
-                #  protocol:str = "tcp",
-                #  hostname:str = "127.0.0.1",
-                #  port:int = 60667,
-                #  req_res_port:int = 60667,
+                 tezcanalyticx_params:Option[TezcanalyticXParams]= NONE,
                  maxsize:int = 100
     ):
         q = Queue(maxsize=maxsize)
@@ -26,13 +25,7 @@ class DistributedRuntime(ActiveXRuntime):
             q= q,
             runtime_id=runtime_id,
             endpoint_manager=endpoint_manager,
-            # middleware=DistributedEndpoint(
-            #     protocol = protocol,
-            #     hostname = hostname,
-            #     port     = port,
-            #     req_res_port = req_res_port
-            # ),
-            storage_service=MictlanXStorageService(),
+            storage_service=MictlanXStorageService(tezcanalyticx_params=tezcanalyticx_params),
             is_distributed=True,
             scheduler= ActiveXScheduler(tasks=[],runtime_queue=q)
         )

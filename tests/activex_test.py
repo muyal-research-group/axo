@@ -1,7 +1,7 @@
 from typing import Dict
 import unittest
 from activex import ActiveX,activex_method
-from activex.handler.handler import ActiveXContextManager
+from activex.contextmanager.contextmanager import ActiveXContextManager
 from activex.endpoint import XoloEndpointManager,EndpointX,DistributedEndpoint
 # import cloudpickle as CP
 # from mictlanx.v4.client import Client
@@ -16,6 +16,8 @@ import os
 import logging
 from .common import Dog,Calculator,Cipher
 from dotenv import load_dotenv
+from option import Some
+from mictlanx.logger.tezcanalyticx.tezcanalyticx import TezcanalyticXParams
 
 ENV_FILE_PATH = os.environ.get("ENV_FILE_PATH",-1)
 if not ENV_FILE_PATH == -1:
@@ -63,7 +65,7 @@ class ActiveXTest(unittest.TestCase):
     def test_local_context_layer_cipher(self):
         axcm    = ActiveXContextManager.local()
         cipher  = Cipher(security_level=128)
-        sk = cipher.key_gen()
+        sk      = cipher.key_gen()
         
         res =  cipher.encrypt(
             plaintext=b"Secret data",
@@ -74,6 +76,7 @@ class ActiveXTest(unittest.TestCase):
             "method":"encrypt",
             "result":res
         })
+
         res = cipher.decrypt(
             key= sk,
             ciphertext=res.unwrap()
@@ -83,7 +86,7 @@ class ActiveXTest(unittest.TestCase):
             "result":res
         })
         cipher.persistify()
-    
+
     # @unittest.skip("")
     def test_distributed_context_layer_cipher(self):
         endpoint_manager = XoloEndpointManager()
@@ -95,30 +98,84 @@ class ActiveXTest(unittest.TestCase):
             pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
         )
 
-        ax     = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
-        cipher  = Cipher(security_level=128)
-        sk = cipher.key_gen()
-        
-        cipher.persistify()
-        res =  cipher.encrypt(
-            plaintext=b"Secret data",
-            key= sk,
-            sink_bucket_id = cipher.get_sink_bucket_id()
+        ax     = ActiveXContextManager.distributed(
+            endpoint_manager=endpoint_manager,
+            tezcanalyticx_params= Some(
+                TezcanalyticXParams(
+                    port= 45000,
+                    hostname="localhost",
+                    protocol="http",
+                )
+            )
         )
+        while True:
+            cipher  = Cipher(security_level=128)
+            sk = cipher.key_gen()
+            cipher.persistify()
+            f = open("/source/01.pdf","rb")
+            plaintext = f.read()
+            f.close()
+            res =  cipher.encrypt(
+                plaintext=plaintext,
+                key= sk,
+                sink_bucket_id = cipher.get_sink_bucket_id()
+            )
+            del plaintext
 
-        logger.debug({
-            "method":"encryp",
-            "result":res
-        })
-        res = cipher.decrypt(
-            key= sk,
-            ciphertext=res.unwrap(),
-            sink_bucket_id = cipher.get_sink_bucket_id()
+            logger.debug({
+                "method":"encrypt",
+                # "result":res
+            })
+            res = cipher.decrypt(
+                key= sk,
+                ciphertext=res.unwrap(),
+                sink_bucket_id = cipher.get_sink_bucket_id()
+            )
+            for i in range(np.random.randint(0,100)):
+                x = ActiveX.get_by_key(bucket_id=cipher.get_sink_bucket_id(), key= cipher.get_sink_key())
+                print(x)
+            logger.debug({
+                "method":"decrypt",
+                # "result":res
+            })
+            T.sleep(2)
+
+
+
+    @unittest.skip("")
+    def test_distributed_context_layer_get_cipher(self):
+        endpoint_manager = XoloEndpointManager()
+        endpoint_manager.add_endpoint(
+            endpoint_id=AXO_ENDPOINT_ID,
+            protocol=AXO_ENDPOINT_PROTOCOL,
+            hostname=AXO_ENDPOINT_HOSTNAME,
+            req_res_port=AXO_ENDPOINT_REQ_RES_PORT,
+            pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
         )
-        logger.debug({
-            "method":"decrypt",
-            "result":res
-        })
+        axcm           = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
+        bucket_id      = "39xoc05wyy0nunof"
+        key            = "x3fxeow4f0wje3k5"
+        
+        get_obj_result = ActiveX.get_by_key(bucket_id=bucket_id, key=key)
+        
+        if get_obj_result.is_ok:
+            obj:Cipher = get_obj_result.unwrap()
+
+            logger.debug({
+                "event":"GET.BY.KEY",
+                "bucket_id":bucket_id,
+                "key":key,
+                "obj":str(obj)
+            })
+            res        = obj.encrypt(plaintext=b"SECRETMETSSAGE", key=obj.key_gen(),sink_bucket_id = obj.get_sink_bucket_id())
+            logger.debug({
+                "method":"encryp",
+                "result":res
+            })
+        else:
+            logger.error({
+                "msg":str(get_obj_result.unwrap_err())
+            })
 
 
     # 

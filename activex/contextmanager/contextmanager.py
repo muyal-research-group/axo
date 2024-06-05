@@ -3,6 +3,8 @@ from activex.runtime.local import LocalRuntime
 from activex.runtime.distributed import DistributedRuntime
 from activex.runtime.runtime import ActiveXRuntime
 from activex.endpoint import XoloEndpointManager
+from mictlanx.logger.tezcanalyticx.tezcanalyticx import TezcanalyticXParams
+from option import Option,NONE
 from typing import Optional
 from nanoid import generate as nanoid
 import string
@@ -38,16 +40,14 @@ class ActiveXContextManager:
         
     @staticmethod
     def distributed(
-        endpoint_manager:XoloEndpointManager
-        # protocol:str = "tcp",
-        # hostname:str="localhost",
-        # port:int = 16666,
-        # req_res_port:int = 16667
+        endpoint_manager:XoloEndpointManager,
+        tezcanalyticx_params:Option[TezcanalyticXParams] = NONE
     )->'ActiveXContextManager':
         return ActiveXContextManager(
             runtime= DistributedRuntime(
                 runtime_id="distributed-{}".format(nanoid(alphabet=string.ascii_lowercase+string.digits)),
-                endpoint_manager=endpoint_manager
+                endpoint_manager=endpoint_manager,
+                tezcanalyticx_params=tezcanalyticx_params
                 # protocol=protocol,
                 # hostname=hostname,
                 # port=port,

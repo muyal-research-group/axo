@@ -1,5 +1,5 @@
 
-from activex.handler import ActiveXContextManager
+from activex.contextmanager import ActiveXContextManager
 from activex.runtime import get_runtime
 import logging
 from common import HeatmapProducer

@@ -1,6 +1,6 @@
 
 
-from activex.handler import ActiveXContextManager
+from activex.contextmanager import ActiveXContextManager
 
 # from activex.storage import Put
 import logging

@@ -1,5 +1,5 @@
 
-from activex.handler import ActiveXContextManager
+from activex.contextmanager import ActiveXContextManager
 from common import Perceptron
 import logging
 import more_itertools as mit

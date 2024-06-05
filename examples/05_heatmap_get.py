@@ -1,5 +1,5 @@
 
-from activex.handler import ActiveXContextManager
+from activex.contextmanager import ActiveXContextManager
 import logging
 from common import HeatmapProducer
 import more_itertools as mit

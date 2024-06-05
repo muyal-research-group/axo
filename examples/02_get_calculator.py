@@ -1,4 +1,4 @@
-from activex.handler import ActiveXContextManager
+from activex.contextmanager import ActiveXContextManager
 from common import Calculator
 import more_itertools as mit
 import sys
