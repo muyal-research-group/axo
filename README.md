@@ -3,7 +3,7 @@
 </p>
 
 <div align=center>
-<a href="https://test.pypi.org/project/mictlanx/"><img src="https://img.shields.io/badge/build-0.0.12-2ea44f?logo=Logo&logoColor=%23000" alt="build - 0.0.12"></a>
+<a href="https://test.pypi.org/project/mictlanx/"><img src="https://img.shields.io/badge/build-0.0.13-2ea44f?logo=Logo&logoColor=%23000" alt="build - 0.0.13"></a>
 </div>
 <div align=center>
 	<h1>ActiveX: <span style="font-weight:normal;"> High available active objects</span></h1>
