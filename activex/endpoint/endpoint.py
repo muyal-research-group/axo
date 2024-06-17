@@ -85,8 +85,6 @@ class LocalEndpoint(EndpointX):
         return Err(Exception("Not found: {}".format(key)))
     def method_execution(self,key:str,fname:str,ao:ActiveX,f:GenericFunction = None,fargs:list=[],fkwargs:dict={}) -> Result[Any, Exception]:
         try:
-            # fn = getattr(ao, fname)
-            # print(fn)
             return Ok(f(ao,*fargs, **fkwargs))
         except Exception as e:
             return Err(e)
@@ -101,7 +99,7 @@ class DistributedEndpoint(EndpointX):
                  pubsub_port: int = 16666,
                  req_res_port:int = 16667,
                  max_health_ping_time:str = "1h",
-                 max_recv_timeout:str = "30s",
+                 max_recv_timeout:str = "120s",
                  max_retries:int=10
     ):
         super().__init__(protocol=protocol,hostname=hostname, req_res_port=req_res_port,endpoint_id=endpoint_id,pubsub_port=pubsub_port,is_local=False)
@@ -161,7 +159,7 @@ class DistributedEndpoint(EndpointX):
                 if not self.reqres_socket  == None and ( self.last_ping_at ==-1 or  diff >= self.max_health_tick_time ):
                     T.sleep(1)
                     try:
-                        logger.debug("BEGORE.SEND.MULTIPLART")
+                        logger.debug("BEFORE.SEND.MULTIPLART")
                         x = self.reqres_socket.send_multipart([b"activex",b"PING",b"{}"],track=True)
                         logger.debug("BEGORE.SEND.AFTER")
                         y = self.reqres_socket.recv_multipart()
@@ -221,13 +219,13 @@ class DistributedEndpoint(EndpointX):
         start_time = T.time()
         try:
             # logger.debug("method_execution {} {}".format(key, fname))
-            logger.debug({
-                "event":"METHOD.EXECUTION",
-                "sink_bucket_id":ao.get_sink_bucket_id(), 
-                "sink_key":"{}{}".format(fname,ao.get_sink_key()),
-                "function_name":fname,
-                **fkwargs
-            })
+            # logger.debug({
+            #     "event":"METHOD.EXECUTION",
+            #     # "sink_bucket_id":ao.get_sink_bucket_id(), 
+            #     # # "sink_key":"{}{}".format(fname,ao.get_sink_key()),
+            #     "function_name":fname,
+            #     # **fkwargs
+            # })
             payload = {
                 "key":key,
                 "fname":fname
@@ -249,6 +247,8 @@ class DistributedEndpoint(EndpointX):
                 
                 logger.info({
                     "event":"METHOD.EXEC.COMPLETED",
+                    "key":key,
+                    "fname":fname,
                     "status":status,
                     "topic":topic,
                     "operation":operation,

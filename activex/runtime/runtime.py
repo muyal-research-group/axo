@@ -51,19 +51,18 @@ class ActiveXRuntime(ABC,Thread):
             instance: ActiveX,
             bucket_id:Optional[str] = None,
             key:Optional[str] = None,
-            storage_node:Optional[str] = None
     )->Result[str,Exception]:
         
         instance_endpoint_id = instance.get_endpoint_id()
-        endpoint = self.endpoint_manager.get_endpoint(endpoint_id=instance_endpoint_id )
-        logger.debug({
-            "event":"GET.ENDPOINT",
-            "instance_endpoint_id":instance_endpoint_id,
-            "endpoint_id":endpoint.endpoint_id,
-            "hostname":endpoint.hostname,
-            "pubsub_port":endpoint.pubsub_port,
-            "req_res_port":endpoint.req_res_port
-        })
+        endpoint             = self.endpoint_manager.get_endpoint(endpoint_id=instance_endpoint_id )
+        # logger.debug({
+        #     "event":"GET.ENDPOINT",
+        #     "instance_endpoint_id":instance_endpoint_id,
+        #     "endpoint_id":endpoint.endpoint_id,
+        #     "hostname":endpoint.hostname,
+        #     "pubsub_port":endpoint.pubsub_port,
+        #     "req_res_port":endpoint.req_res_port
+        # })
         # print("ENDPOINT",endpoint)
         m_result = endpoint.put(
             key=key,
@@ -85,14 +84,41 @@ class ActiveXRuntime(ABC,Thread):
         while self.is_running:
             task:Task = self.q.get()
             current_time = T.time()
-            logger.debug("TASK.DEQUEUE {}".format(task.id))
+            # logger.debug("TASK.DEQUEUE {}".format(task.id))
+            logger.debug({
+                "event":"TASK.DEQUEUE",
+                "task_id":task.id,
+                **task.metadata
+            })
             if current_time >= task.executes_at:
-                path   = task.metadata.get("path","")
+                path       = task.metadata.get("path","")
+                bucket_id  = task.metadata.get("bucket_id","activex")
+                chunk_size = task.metadata.get("chunk_size","1MB")
+                
                 if task.operation == "PUT" and not path =="" and not path in self.remote_files:
-                    result = self.storage_service.put_data_from_file(key="",source_path=path,tags={},chunk_size="1MB")
+                    result = self.storage_service.put_data_from_file(
+                        bucket_id=bucket_id,
+                        key="",
+                        source_path=path,
+                        tags={},
+                        chunk_size=chunk_size
+                    )
                     if result.is_ok:
+                        logger.info({
+                            "event":"PUT.DATA.FROM.FILE",
+                            "task_id":task.id,
+                            **task.metadata,
+                            "bucket_id":bucket_id,
+                            "path":path,
+                        })
                         self.remote_files.add(path)
-                    logger.debug("{} {}".format(task.operation, task.id ))
+                    else:
+                        logger.error({
+                            "event":"PUT.DATA.FROM.FILE.FAILED",
+                            "bucket_id":bucket_id,
+                            "path":path,
+                            "msg":str(result.unwrap_err())
+                        })
                 elif task.operation == "DROP":
                     logger.debug("{} {}".format(task.operation, task.id))
 
