@@ -130,7 +130,7 @@ class MictlanXStorageService(StorageService):
                     "response_size":response_size
                 })
                 continue
-            return Ok(ActiveX.from_bytes(response.value))
+            return ActiveX.from_bytes(response.value)
     def get_data_to_file(self, key: str,bucket_id:str="",filename:str="",output_path:str="/activex/data",chunk_size:str="1MB") -> Result[str, Exception]:
         try:
             return self.client.get_to_file(key=key,bucket_id=bucket_id,filename=filename,output_path=output_path,chunk_size=chunk_size)

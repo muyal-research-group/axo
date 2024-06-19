@@ -1,6 +1,9 @@
 from __future__ import annotations
 from option import Result,Ok,Err
 import os
+import inspect
+import types 
+from typing import TypeVar,Generic
 import string
 import logging
 import re
@@ -14,13 +17,14 @@ from activex.runtime import get_runtime
 from mictlanx.logger.log import Log
 from activex.utils import serialize_and_yield_chunks
 import time as T
-
+import struct
+R = TypeVar('R')
 
 
 ALPHABET                  = string.ascii_lowercase+string.digits
 AXO_ID_SIZE               =int(os.environ.get("AXO_ID_SIZE","16"))
 AXO_DEBUG                 = bool(int(os.environ.get("AXO_DEBUG","1")))
-AXO_PRODUCTION_LOG_ENABLE = bool(int(os.environ.get("AXO_PRODUCTION_LOG_ENABLE","1")))
+AXO_PRODUCTION_LOG_ENABLE = bool(int(os.environ.get("AXO_PRODUCTION_LOG_ENABLE","0")))
 AXO_PROPERTY_PREFIX       = "_acx_property_"
 AXO_LOG_PATH              = os.environ.get("AXO_LOG_PATH","/activex/log")
 
@@ -51,10 +55,10 @@ def activex_method(f):
             runtime                    = get_runtime()
             endpoint                   = runtime.endpoint_manager.get_endpoint(endpoint_id= kwargs.get("endpoint_id",""))
             kwargs["endpoint_id"]      = endpoint.endpoint_id
-            kwargs["axo_key"]          = self.get_axo_key()
-            kwargs["axo_bucket_id"]    = self.get_axo_bucket_id()
-            kwargs["sink_bucket_id"]   = self.get_sink_bucket_id()
-            kwargs["source_bucket_id"] = self.get_source_bucket_id()
+            kwargs["axo_key"]          = kwargs.get("axo_key",self.get_axo_key())
+            kwargs["axo_bucket_id"]    = kwargs.get("axo_bucket_id",self.get_axo_bucket_id())
+            kwargs["sink_bucket_id"]   = kwargs.get("sink_bucket_id",self.get_sink_bucket_id())
+            kwargs["source_bucket_id"] = kwargs.get("source_bucket_id",self.get_source_bucket_id())
             # kwargs = {**kwargs}
 
             logger.debug({
@@ -93,6 +97,7 @@ def activex_method(f):
         
         except Exception as e:
             logger.error(str(e))
+    __activex.original = f
     return __activex
 
 
@@ -161,10 +166,19 @@ class MetadataX(BaseModel):
     #     return v if v is not None else nanoid(ALPHABET, size=ACTIVEX_OBJECT_ID_SIZE)
     
 class ActiveX:
+    # _acx_format= "!ssss"
     _acx_metadata: MetadataX
     _acx_local:bool = True
     _acx_remote:bool = False
     
+
+    @staticmethod
+    def call(instance,method_name:str,*args,**kwargs)->Result[R,Exception]:
+        print("methods",method_name,instance)
+        if hasattr(instance,method_name):
+            value = getattr(instance, method_name)
+            return Ok(value(*args,**kwargs)) if inspect.isfunction(value) or inspect.ismethod(value) else Ok(value)
+        return Err(Exception("{} not found in the object instance.".format(method_name)))
 
     def get_sink_path(self)->str:
         return "{}/{}".format(self._acx_metadata.sink_path,self.get_sink_bucket_id())
@@ -276,14 +290,63 @@ class ActiveX:
         # print(self.metadata)
         
 
-    def to_bytes(self):
-        return CP.dumps(self)
+    # def to_bytes(self):
+        # return CP.dumps(self)
+    def to_bytes(self)->bytes:
+        attrs            = self.__dict__
+        methods          = dict([ (attr,getattr(self, attr) )  for attr in dir(self) if callable(getattr(self, attr))])
+        attrs_bytes      = CP.dumps(attrs)
+        methods_bytes    = CP.dumps(methods)
+        class_def_bytes  = CP.dumps(self.__class__)
+        class_code_str   = inspect.getsource(self.__class__)
+        class_code_bytes = CP.dumps(class_code_str.encode())
+        # pack             = struct.pack(self._acx_format,attrs_bytes, methods_bytes, class_def_bytes,class_code_bytes)
+        # print(pack)
+        packed_data = b''
+        for data in (attrs_bytes, methods_bytes, class_def_bytes, class_code_bytes):
+            # Prefix each part with its length (using 4 bytes for the length)
+            packed_data += struct.pack('I', len(data)) + data
+        # print(packed_data)
+        return packed_data
+        # return (attrs_bytes,methods_bytes)
+        # return CP.dumps(self)
+
     def to_stream(self,chunk_size:str="1MB")->Generator[bytes,None,None]:
         return serialize_and_yield_chunks(obj=self, chunk_size=chunk_size)
+    # def t
 
     @staticmethod
-    def from_bytes(raw_obj:bytes):
-        return CP.loads(raw_obj)
+    def from_bytes(raw_obj:bytes)->Result[ActiveX,Exception]:
+        try:
+            index = 0
+            unpacked_data = []
+            while index < len(raw_obj):
+                # Read length
+                length = struct.unpack_from('I', raw_obj, index)[0]
+                index += 4  # Move past the length field
+                # Read data
+                data = raw_obj[index:index+length]
+                index += length
+                unpacked_data.append(CP.loads(data))  # Deserialize each component
+            attrs    = unpacked_data[0]
+            class_df = unpacked_data[2]
+            methods = unpacked_data[1]
+            instance:ActiveX = class_df()
+            # print("INSTANCE",instance)
+            for attr_name, attr_value in attrs.items():
+                if attr_name not in ('__class__', '__dict__', '__module__', '__weakref__'):
+                    setattr(instance, attr_name, attr_value)
+            for method_name, func in methods.items():
+                if "original" in dir(func):
+                    func = func.original
+                bound_method = types.MethodType(func, instance)
+                if method_name not in ('__class__', '__dict__', '__module__', '__weakref__'):
+                    setattr(instance, method_name, bound_method)
+            # f0       = methods["test"].original
+            return Ok(instance)
+        except Exception as e:
+            return Err(e)
+        # return CP.loads(raw_obj)
     
     @staticmethod
     def get_by_key(key:str,bucket_id:str="")->Result[ActiveX,Exception]:

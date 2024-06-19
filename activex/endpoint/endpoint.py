@@ -242,7 +242,6 @@ class DistributedEndpoint(EndpointX):
                 operation       = operation_bytes.decode()
                 status          = int.from_bytes(bytes=status_bytes, byteorder="little",signed=True )
                 result          = self.__deserialize(x= result_bytes)
-                # CP.loads(result_bytes)
                 result_metadata = J.loads(metadata_bytes)
                 
                 logger.info({

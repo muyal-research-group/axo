@@ -21,8 +21,9 @@ more-itertools = "^10.2.0"
 pandas = "1.4.3"
 seaborn = "^0.13.2"
 rory = "0.0.143"
+galois = "0.3.8"
 
-galois = "^0.3.9"
+numpy = "01.23.2"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
