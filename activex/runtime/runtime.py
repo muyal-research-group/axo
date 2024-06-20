@@ -68,11 +68,25 @@ class ActiveXRuntime(ABC,Thread):
             key=key,
             metadata=instance._acx_metadata
         )
+        if m_result.is_err:
+            logger.error({
+                "event":"AXO.STORAGE.METADATA.FAILED",
+                "axo_bucket_id":instance.get_axo_bucket_id(),
+                "axo_key":instance.get_axo_key(),
+            })
+            return Err(Exception("Active object storage metadata failed: {}".format(str(m_result.unwrap_err()))))
         s_result = self.storage_service.put(
             obj=instance,
             bucket_id=bucket_id,
             key=key
         )
+        if s_result.is_err:
+            logger.error({
+                "event":"AXO.STORAGE.FAILED",
+                "axo_bucket_id":instance.get_axo_bucket_id(),
+                "axo_key":instance.get_axo_key(),
+            })
+            return Err(Exception("Active object storage failed: {}".format(str(s_result.unwrap_err()))))
         return Ok(key)
             
         # logger.debug("%s persistify",key)

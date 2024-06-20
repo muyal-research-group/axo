@@ -72,10 +72,10 @@ class LocalEndpoint(EndpointX):
         )
         self.__db  = {}
 
-    def put(self, key: str, value: MetadataX) -> Result[str, Exception]:
+    def put(self, key: str, metadata: MetadataX) -> Result[str, Exception]:
         try:
             if not key in self.__db:
-                self.__db[key] = value
+                self.__db[key] = metadata
             return Ok(key)
         except Exception as e:
             return Err(e)
@@ -233,7 +233,7 @@ class DistributedEndpoint(EndpointX):
             payload_bytes = J.dumps(payload).encode(self.encoding)
 
             f_bytes = CP.dumps(f)
-            self.reqres_socket.send_multipart([b"activex",b"METHOD.EXEC", payload_bytes, f_bytes,CP.dumps(fargs), CP.dumps(fkwargs)])
+            self.reqres_socket.send_multipart([b"activex",b"METHOD.EXEC", payload_bytes, f_bytes,CP.dumps(fargs[1:]), CP.dumps(fkwargs)])
             response_multipart = self.reqres_socket.recv_multipart()
             if len(response_multipart) == 5:
                 topic_bytes,operation_bytes,status_bytes,metadata_bytes, result_bytes  = response_multipart

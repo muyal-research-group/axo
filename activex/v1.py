@@ -3,7 +3,7 @@ from option import Result,Ok,Err
 import os
 import inspect
 import types 
-from typing import TypeVar,Generic
+from typing import TypeVar,Generic,Any
 import string
 import logging
 import re
@@ -15,6 +15,7 @@ from pydantic import BaseModel,Field
 from pydantic.functional_validators import AfterValidator
 from activex.runtime import get_runtime
 from mictlanx.logger.log import Log
+import mictlanx.v4.interfaces as InterfaceX
 from activex.utils import serialize_and_yield_chunks
 import time as T
 import struct
@@ -171,10 +172,17 @@ class ActiveX:
     _acx_local:bool = True
     _acx_remote:bool = False
     
+    def get_bytes(self, bucket_id:str, key:str)->Result[bytes,Exception]:
+        runtime    = get_runtime()
+        return runtime.storage_service.get_bytes(bucket_id=bucket_id,key=key)
+    
+    def put_bytes(self, bucket_id:str,key:str)->Result[InterfaceX.PutChunkedResponse, Exception]:
+        runtime    = get_runtime()
+        return runtime.storage_service.put_bytes(bucket_id=bucket_id, key=key)
 
     @staticmethod
     def call(instance,method_name:str,*args,**kwargs)->Result[R,Exception]:
-        print("methods",method_name,instance)
+        # print("methods",method_name,instance)
         if hasattr(instance,method_name):
             value = getattr(instance, method_name)
             return Ok(value(*args,**kwargs)) if inspect.isfunction(value) or inspect.ismethod(value) else Ok(value)
@@ -260,21 +268,10 @@ class ActiveX:
             class_name= class_name,
             module= module,
             name= name,
-
-            # id= None
         )
         runtime= get_runtime()
-        # obj.get_source_bucket_id()
-        # obj.get_sink_bucket_id()
         obj.set_endpoint_id(endpoint_id=runtime.endpoint_manager.get_endpoint().endpoint_id)
-        # obj.get_sink_key()
-        # obj.get_sink_keys()
-        # logger.debug({
-        #     "event":"NEW",
-        #     "class_name":cls.__name__,
-        #     "module":module,
-        #     # "name":name
-        # })
+     
         return obj
 
         
@@ -316,7 +313,7 @@ class ActiveX:
     # def t
 
     @staticmethod
-    def from_bytes(raw_obj:bytes)->Result[ActiveX,Exception]:
+    def from_bytes(raw_obj:bytes,original_f:bool=False)->Result[ActiveX,Exception]:
         try:
             index = 0
             unpacked_data = []
@@ -329,15 +326,14 @@ class ActiveX:
                 index += length
                 unpacked_data.append(CP.loads(data))  # Deserialize each component
             attrs    = unpacked_data[0]
-            class_df = unpacked_data[2]
             methods = unpacked_data[1]
+            class_df = unpacked_data[2]
             instance:ActiveX = class_df()
-            # print("INSTANCE",instance)
             for attr_name, attr_value in attrs.items():
                 if attr_name not in ('__class__', '__dict__', '__module__', '__weakref__'):
                     setattr(instance, attr_name, attr_value)
             for method_name, func in methods.items():
-                if "original" in dir(func):
+                if "original" in dir(func) and original_f:
                     func = func.original
                 bound_method = types.MethodType(func, instance)
                 if method_name not in ('__class__', '__dict__', '__module__', '__weakref__'):
@@ -352,6 +348,7 @@ class ActiveX:
     def get_by_key(key:str,bucket_id:str="")->Result[ActiveX,Exception]:
         return get_runtime().get_by_key(key=key,bucket_id=bucket_id)
 
+ 
     def persistify(self,bucket_id:str="",key:str="")->Result[str, Exception]:
         try:
             start_time = T.time()
@@ -365,13 +362,19 @@ class ActiveX:
             )
             self._acx_remote = persistify_result.is_ok
             self._acx_local = persistify_result.is_err
-            logger.info({
-                "event":"PERSISTIFY",
-                "axo_bucket_id":_bucket_id,
-                "axo_key":_key,
-                "source_bucket_id":self.get_source_bucket_id(),
-                "sink_bucket_id":self.get_sink_bucket_id(),
-                "response_time":T.time()- start_time
+            if persistify_result.is_ok:
+                logger.info({
+                    "event":"PERSISTIFY",
+                    "axo_bucket_id":_bucket_id,
+                    "axo_key":_key,
+                    "source_bucket_id":self.get_source_bucket_id(),
+                    "sink_bucket_id":self.get_sink_bucket_id(),
+                    "response_time":T.time()- start_time
+                })
+                return persistify_result
+            logger.error({
+                "event":"PERSISTIFY.FAILED",
+                "reason":str(persistify_result.unwrap_err())
             })
             return persistify_result
         except Exception as e:
