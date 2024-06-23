@@ -44,8 +44,8 @@ class ActiveXRuntime(ABC,Thread):
         self.endpoint_manager= endpoint_manager
         self.start()
     
-    def get_by_key(self,bucket_id:str,key:str)->Result[ActiveX,Exception]:
-        return self.storage_service.get(key=key,bucket_id=bucket_id)
+    def get_active_object(self,bucket_id:str,key:str)->Result[ActiveX,Exception]:
+        return self.storage_service.__get_active_object(key=key,bucket_id=bucket_id)
     def persistify(
             self,
             instance: ActiveX,
@@ -76,9 +76,11 @@ class ActiveXRuntime(ABC,Thread):
             })
             return Err(Exception("Active object storage metadata failed: {}".format(str(m_result.unwrap_err()))))
         s_result = self.storage_service.put(
-            obj=instance,
+            # obj=instance,
             bucket_id=bucket_id,
-            key=key
+            key=key,
+            data= instance.to_bytes(),
+            tags=instance._acx_metadata.to_json_with_string_values()
         )
         if s_result.is_err:
             logger.error({

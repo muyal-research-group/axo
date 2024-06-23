@@ -1,2 +1,7 @@
 #!/bin/bash
-rm ./dist/* && poetry build
+poetry lock
+poetry install
+rm ./dist/* 
+poetry build
+
+

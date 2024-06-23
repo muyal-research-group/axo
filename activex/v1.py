@@ -3,7 +3,7 @@ from option import Result,Ok,Err
 import os
 import inspect
 import types 
-from typing import TypeVar,Generic,Any
+from typing import TypeVar,Generic,Any,Iterator
 import string
 import logging
 import re
@@ -54,12 +54,14 @@ def activex_method(f):
         try:
             start_time                 = T.time()
             runtime                    = get_runtime()
+            self.set_endpoint_id(endpoint_id=runtime.endpoint_manager.get_endpoint().endpoint_id)
             endpoint                   = runtime.endpoint_manager.get_endpoint(endpoint_id= kwargs.get("endpoint_id",""))
             kwargs["endpoint_id"]      = endpoint.endpoint_id
             kwargs["axo_key"]          = kwargs.get("axo_key",self.get_axo_key())
             kwargs["axo_bucket_id"]    = kwargs.get("axo_bucket_id",self.get_axo_bucket_id())
             kwargs["sink_bucket_id"]   = kwargs.get("sink_bucket_id",self.get_sink_bucket_id())
             kwargs["source_bucket_id"] = kwargs.get("source_bucket_id",self.get_source_bucket_id())
+            # kwargs[""]
             # kwargs = {**kwargs}
 
             logger.debug({
@@ -108,7 +110,6 @@ def generate_id(v:str)->str:
     return re.sub(r'[^a-z0-9_]', '', v)
 def generate_id_size(size:int=AXO_ID_SIZE):
     def __in(v:str)->str:
-        print(v,size)
         if v == None or v == "":
             return nanoid(alphabet=ALPHABET, size=size)
         return re.sub(r'[^a-z0-9_]', '', v)
@@ -162,31 +163,52 @@ class MetadataX(BaseModel):
 
         return json_data
 
-    # @validator("id", pre=True, always=True)
-    # def generate_id(cls, v):
-    #     return v if v is not None else nanoid(ALPHABET, size=ACTIVEX_OBJECT_ID_SIZE)
     
 class ActiveX:
-    # _acx_format= "!ssss"
     _acx_metadata: MetadataX
     _acx_local:bool = True
     _acx_remote:bool = False
     
-    def get_bytes(self, bucket_id:str, key:str)->Result[bytes,Exception]:
-        runtime    = get_runtime()
-        return runtime.storage_service.get_bytes(bucket_id=bucket_id,key=key)
+    # def get_from_file(self,path:str,chunk_size:int=10000)->Result[Generator[bytes, Any,Any],Exception]:
+    #     try:
+    #         def __get_from_file():
+    #             with open(path,"rb") as f:
+    #                 completed = False
+    #                 while not completed:
+    #                     data = f.read(chunk_size)
+    #                     if data == None or len(data) == 0:
+    #                         completed = True
+    #                     else:
+    #                         yield data
+    #         return Ok(__get_from_file())
+                    
+    #     except Exception as e:
+    # #         return Err(e)
+    # def get_bytes(self, bucket_id:str, key:str)->Result[bytes,Exception]:
+    #     runtime    = get_runtime()
+    #     return runtime.storage_service.get_bytes(bucket_id=bucket_id,key=key)
     
-    def put_bytes(self, bucket_id:str,key:str)->Result[InterfaceX.PutChunkedResponse, Exception]:
-        runtime    = get_runtime()
-        return runtime.storage_service.put_bytes(bucket_id=bucket_id, key=key)
+    # def put_bytes(self, bucket_id:str,key:str,data:bytes,chunk_size:str="1MB")->Result[InterfaceX.PutChunkedResponse, Exception]:
+    #     runtime    = get_runtime()
+    #     return runtime.storage_service.put_bytes(bucket_id=bucket_id, key=key,data=data, chunk_size=chunk_size)
 
     @staticmethod
     def call(instance,method_name:str,*args,**kwargs)->Result[R,Exception]:
         # print("methods",method_name,instance)
-        if hasattr(instance,method_name):
-            value = getattr(instance, method_name)
-            return Ok(value(*args,**kwargs)) if inspect.isfunction(value) or inspect.ismethod(value) else Ok(value)
-        return Err(Exception("{} not found in the object instance.".format(method_name)))
+        try:
+            if hasattr(instance,method_name):
+                value = getattr(instance, method_name)
+                is_callable = inspect.isfunction(value) or inspect.ismethod(value)
+                if is_callable:
+                    output = value(*args,**kwargs)
+                    return Ok(output)
+                else:
+                    return Ok(value)
+                # if 
+                # return Ok(value(*args,kwargs)) if  else Ok(value)
+            return Err(Exception("{} not found in the object instance.".format(method_name)))
+        except Exception as e:
+            return Err(e)
 
     def get_sink_path(self)->str:
         return "{}/{}".format(self._acx_metadata.sink_path,self.get_sink_bucket_id())
@@ -250,8 +272,8 @@ class ActiveX:
             return self.set_endpoint_id()
         return self._acx_metadata.endpoint_id
 
-    def __init_subclass__(cls, **kwargs):
-        pass
+    # def __init_subclass__(cls, **kwargs):
+    #     pass
         # logger.debug({
         #     "event":"INIT.SUBCLASS",
         #     "class_name":cls.__name__
@@ -269,8 +291,8 @@ class ActiveX:
             module= module,
             name= name,
         )
-        runtime= get_runtime()
-        obj.set_endpoint_id(endpoint_id=runtime.endpoint_manager.get_endpoint().endpoint_id)
+        # runtime= get_runtime()
+        # obj.set_endpoint_id(endpoint_id=runtime.endpoint_manager.get_endpoint().endpoint_id)
      
         return obj
 
@@ -346,7 +368,7 @@ class ActiveX:
     
     @staticmethod
     def get_by_key(key:str,bucket_id:str="")->Result[ActiveX,Exception]:
-        return get_runtime().get_by_key(key=key,bucket_id=bucket_id)
+        return get_runtime().get_active_object(key=key,bucket_id=bucket_id)
 
  
     def persistify(self,bucket_id:str="",key:str="")->Result[str, Exception]:
@@ -355,6 +377,7 @@ class ActiveX:
             _key       = self.get_axo_key() if key == "" else key
             _bucket_id = self.get_axo_bucket_id() if bucket_id =="" else bucket_id
             runtime    = get_runtime()
+            self.set_endpoint_id(endpoint_id=runtime.endpoint_manager.get_endpoint().endpoint_id)
             persistify_result = runtime.persistify(
                 instance  = self,
                 bucket_id = _bucket_id,

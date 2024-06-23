@@ -3,6 +3,8 @@ import unittest
 from activex import ActiveX,activex_method
 from activex.contextmanager.contextmanager import ActiveXContextManager
 from activex.endpoint import XoloEndpointManager,EndpointX,DistributedEndpoint
+from activex.runtime.local import LocalRuntime
+from activex.storage.data import MictlanXStorageService
 # import cloudpickle as CP
 # from mictlanx.v4.client import Client
 # from mictlanx.utils.index import Utils
@@ -61,6 +63,21 @@ AXO_ENDPOINT_REQ_RES_PORT = int(os.environ.get("AXO_ENDPOINT_REQ_RES_PORT","1666
 
 class ActiveXTest(unittest.TestCase):
     
+    @unittest.skip("")
+    def test_hybrid_context(self):
+        axcm = ActiveXContextManager(
+            runtime= LocalRuntime(
+                storage_service= Some(MictlanXStorageService(
+                    log_path="/log",
+                ))
+            )
+        )
+        axcm.runtime.storage_service.put_bytes(
+            bucket_id ="test",
+            key="test_test",
+            data=b"HGOLLLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA!!"
+        )
+        print(axcm)
     @unittest.skip("")
     def test_local_context_layer_cipher(self):
         axcm    = ActiveXContextManager.local()
