@@ -3,7 +3,7 @@ from option import Result,Ok,Err
 import os
 import inspect
 import types 
-from typing import TypeVar,Generic,Any,Iterator
+from typing import TypeVar,Generic,Any,Iterator,Tuple,Type
 import string
 import logging
 import re
@@ -15,7 +15,6 @@ from pydantic import BaseModel,Field
 from pydantic.functional_validators import AfterValidator
 from activex.runtime import get_runtime
 from mictlanx.logger.log import Log
-import mictlanx.v4.interfaces as InterfaceX
 from activex.utils import serialize_and_yield_chunks
 import time as T
 import struct
@@ -61,8 +60,13 @@ def activex_method(f):
             kwargs["axo_bucket_id"]    = kwargs.get("axo_bucket_id",self.get_axo_bucket_id())
             kwargs["sink_bucket_id"]   = kwargs.get("sink_bucket_id",self.get_sink_bucket_id())
             kwargs["source_bucket_id"] = kwargs.get("source_bucket_id",self.get_source_bucket_id())
-            # kwargs[""]
-            # kwargs = {**kwargs}
+            if not runtime.is_distributed:
+                kwargs["storage"] = runtime.storage_service
+
+            if runtime.is_distributed and self._acx_local:
+                self.persistify()
+            
+
 
             logger.debug({
                 "event":"METHOD.EXECUTION",
@@ -169,29 +173,6 @@ class ActiveX:
     _acx_local:bool = True
     _acx_remote:bool = False
     
-    # def get_from_file(self,path:str,chunk_size:int=10000)->Result[Generator[bytes, Any,Any],Exception]:
-    #     try:
-    #         def __get_from_file():
-    #             with open(path,"rb") as f:
-    #                 completed = False
-    #                 while not completed:
-    #                     data = f.read(chunk_size)
-    #                     if data == None or len(data) == 0:
-    #                         completed = True
-    #                     else:
-    #                         yield data
-    #         return Ok(__get_from_file())
-                    
-    #     except Exception as e:
-    # #         return Err(e)
-    # def get_bytes(self, bucket_id:str, key:str)->Result[bytes,Exception]:
-    #     runtime    = get_runtime()
-    #     return runtime.storage_service.get_bytes(bucket_id=bucket_id,key=key)
-    
-    # def put_bytes(self, bucket_id:str,key:str,data:bytes,chunk_size:str="1MB")->Result[InterfaceX.PutChunkedResponse, Exception]:
-    #     runtime    = get_runtime()
-    #     return runtime.storage_service.put_bytes(bucket_id=bucket_id, key=key,data=data, chunk_size=chunk_size)
-
     @staticmethod
     def call(instance,method_name:str,*args,**kwargs)->Result[R,Exception]:
         # print("methods",method_name,instance)
@@ -272,18 +253,12 @@ class ActiveX:
             return self.set_endpoint_id()
         return self._acx_metadata.endpoint_id
 
-    # def __init_subclass__(cls, **kwargs):
-    #     pass
-        # logger.debug({
-        #     "event":"INIT.SUBCLASS",
-        #     "class_name":cls.__name__
-        # })
-        # logger.debug(f"Subclass {cls.__name__} created.")
-
+  
 
     def __new__(cls,*args,**kwargs):
         obj = super().__new__(cls)
-        class_name = cls.__module__ + "." + cls.__name__
+        # class_name = cls.__module__ + "." + cls.__name__
+        class_name = cls.__name__
         module = cls.__module__
         name = cls.__name__
         obj._acx_metadata = MetadataX(
@@ -291,9 +266,7 @@ class ActiveX:
             module= module,
             name= name,
         )
-        # runtime= get_runtime()
-        # obj.set_endpoint_id(endpoint_id=runtime.endpoint_manager.get_endpoint().endpoint_id)
-     
+
         return obj
 
         
@@ -334,10 +307,48 @@ class ActiveX:
         return serialize_and_yield_chunks(obj=self, chunk_size=chunk_size)
     # def t
 
+
+    @staticmethod
+    def get_object_parts(raw_obj:bytes,original_f:bool=False)->Result[Tuple[
+        Dict[str, Any], # 
+        Dict[str, Any],
+        Type[ActiveX],
+        str 
+    ],Exception]:
+        try:
+            index = 0
+            unpacked_data = []
+            while index < len(raw_obj):
+                # Read length
+                length = struct.unpack_from('I', raw_obj, index)[0]
+                index += 4  # Move past the length field
+                # Read data
+                data = raw_obj[index:index+length]
+                index += length
+                unpacked_data.append(CP.loads(data))  # Deserialize each component
+            attrs    = unpacked_data[0]
+            methods = unpacked_data[1]
+            class_df = unpacked_data[2]
+            return Ok((attrs,methods,class_df,unpacked_data[-1]))
+            # instance:ActiveX = class_df()
+            # for attr_name, attr_value in attrs.items():
+            #     if attr_name not in ('__class__', '__dict__', '__module__', '__weakref__'):
+            #         setattr(instance, attr_name, attr_value)
+            # for method_name, func in methods.items():
+            #     if "original" in dir(func) and original_f:
+            #         func = func.original
+            #     bound_method = types.MethodType(func, instance)
+            #     if method_name not in ('__class__', '__dict__', '__module__', '__weakref__'):
+            #         setattr(instance, method_name, bound_method)
+            # # f0       = methods["test"].original
+            # return Ok(instance)
+        except Exception as e:
+            return Err(e)
     @staticmethod
     def from_bytes(raw_obj:bytes,original_f:bool=False)->Result[ActiveX,Exception]:
         try:
             index = 0
+            # Attrs, Methods, ClassDefinition, ClassCode
             unpacked_data = []
             while index < len(raw_obj):
                 # Read length
@@ -377,7 +388,9 @@ class ActiveX:
             _key       = self.get_axo_key() if key == "" else key
             _bucket_id = self.get_axo_bucket_id() if bucket_id =="" else bucket_id
             runtime    = get_runtime()
-            self.set_endpoint_id(endpoint_id=runtime.endpoint_manager.get_endpoint().endpoint_id)
+            endpoint = runtime.endpoint_manager.get_endpoint()
+            # print("ENDPOINT",endpoint.endpoint_id)
+            self.set_endpoint_id(endpoint_id=endpoint.endpoint_id)
             persistify_result = runtime.persistify(
                 instance  = self,
                 bucket_id = _bucket_id,
@@ -406,47 +419,3 @@ class ActiveX:
 
 
 
-
-# def resolve_annotations(self:ActiveX):
-#     runtime = get_runtime()
-#     logger.debug("RESOLVE_ANNOTATIONS {}".format(self))
-#     # cls = self.__class__
-#     attributes = self.__dict__
-#     # print(attributes)
-#     T.sleep(2)
-#     for attr_name, attr_value in attributes.items():
-#         # attr_type = type(attr_value)
-#         attr_type_hint = self.__annotations__.get(attr_name)
-#         # print("ATTR_TYPE",attr_type_hint)
-#         # Check if the annotated key is GetKey
-#         T.sleep(2)
-#         if attr_type_hint == Annotated[str,GetKey]:
-#             value = getattr(self,attr_name)
-#             logger.debug("GET {}".format(value))
-#             result = runtime.storage_service.get_data_to_file(
-#                 key=value
-#             )
-#             print("RESULT",result)
-#             T.sleep(2)
-#             if result.is_err:
-#                 logger.error("{} not found in the storage service".format(value))
-#                 # raise Exception("" .format(value))
-        
-#         # Check if the annotated key is PutPath
-#         if attr_type_hint == Annotated[str,PutPath]:
-#             value = getattr(self,attr_name)
-#             logger.debug("SCHEDULE.TASK {}".format(value))
-#             task = Task(
-#                 operation="PUT",
-#                 executed_at= T.time() + HF.parse_timespan(ACX_ENQUEUE_EXTRA_SECS) ,
-#                 metadata={
-#                     "path":value 
-#                 } 
-#             )
-#             # Schedule a put task.
-#             runtime.scheduler.schedule(
-#                 task=task
-#             )
-#     print("FINISH")
-#     T.sleep(5)
-            

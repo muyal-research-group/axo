@@ -62,6 +62,10 @@ class EndpointX(ABC):
                          fkwargs:dict={}
     )->Result[Any,Exception]:
         return Err(Exception("No implemented yet."))
+    
+    @abstractmethod
+    def add_code(self,ao:ActiveX)->Result[bool, Exception]:
+        return Err(Exception("No implemented yet."))
 
         
 
@@ -86,6 +90,11 @@ class LocalEndpoint(EndpointX):
     def method_execution(self,key:str,fname:str,ao:ActiveX,f:GenericFunction = None,fargs:list=[],fkwargs:dict={}) -> Result[Any, Exception]:
         try:
             return Ok(f(ao,*fargs, **fkwargs))
+        except Exception as e:
+            return Err(e)
+    def add_code(self, ao: ActiveX) -> Result[bool, Exception]:
+        try:
+            return Ok(False)
         except Exception as e:
             return Err(e)
         # return Err(Exception("No implemented yet."))
@@ -218,14 +227,6 @@ class DistributedEndpoint(EndpointX):
     def method_execution(self,key:str,fname:str,ao:ActiveX,f:GenericFunction,fargs:list=[],fkwargs:dict={}) -> Result[Any, Exception]:
         start_time = T.time()
         try:
-            # logger.debug("method_execution {} {}".format(key, fname))
-            # logger.debug({
-            #     "event":"METHOD.EXECUTION",
-            #     # "sink_bucket_id":ao.get_sink_bucket_id(), 
-            #     # # "sink_key":"{}{}".format(fname,ao.get_sink_key()),
-            #     "function_name":fname,
-            #     # **fkwargs
-            # })
             payload = {
                 "key":key,
                 "fname":fname
@@ -257,13 +258,25 @@ class DistributedEndpoint(EndpointX):
                 return Ok(result)
             else:
                 return Err(Exception("Not expected response: {}".format(len(response_multipart))))
-            # logger.debug(str(response))
-            # return Ok(key)
         except Exception as e:
             return Err(e)
-        # return super().method_execution()
     
-    
+    def add_code(self, ao: ActiveX) -> Result[bool, Exception]:
+        start_time = T.time()
+        try:
+            payload = {
+                "module":ao._acx_metadata.class_name, 
+                "class_name":ao._acx_metadata.class_name,
+                "axo_bucket_id": ao._acx_metadata.axo_bucket_id,
+                "class_def_key":"{}_class_def".format(ao._acx_metadata.axo_key)
+            }
+            payload_bytes = J.dumps(payload).encode(self.encoding)
+            self.reqres_socket.send_multipart([b"activex",b"ADD.CODE",payload_bytes])
+            logger.info
+            return Ok(False)
+        except Exception as e:
+            return Err(e)
+
     def to_string(self):
         return "{}:{}:{}:{}:{}".format(self.endpoint_id,self.protocol,self.hostname,self.req_res_port,self.pubsub_port)
     @staticmethod

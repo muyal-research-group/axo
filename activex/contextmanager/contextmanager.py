@@ -22,19 +22,10 @@ class ActiveXContextManager:
         self.is_running = True
 
     @staticmethod
-    def local(
-        # protocol:str = "tcp",
-        # hostname:str="localhost",
-        # port:int = 16666,
-        # req_res_port:int = 16667
-    )->'ActiveXContextManager':
+    def local()->'ActiveXContextManager':
         return ActiveXContextManager(
             runtime= LocalRuntime(
                 runtime_id="local-{}".format(nanoid(alphabet=string.ascii_lowercase+string.digits)),
-                # protocol=protocol,
-                # hostname=hostname,
-                # port=port,
-                # req_res_port = req_res_port
             )
         )
         
@@ -48,10 +39,6 @@ class ActiveXContextManager:
                 runtime_id="distributed-{}".format(nanoid(alphabet=string.ascii_lowercase+string.digits)),
                 endpoint_manager=endpoint_manager,
                 tezcanalyticx_params=tezcanalyticx_params
-                # protocol=protocol,
-                # hostname=hostname,
-                # port=port,
-                # req_res_port = req_res_port
             )
         )
         
@@ -61,5 +48,6 @@ class ActiveXContextManager:
         self.runtime.stop()
         set_runtime(self.prev_runtime)
         self.is_running=False
+
     def __del__(self):
         self.stop()

@@ -1,12 +1,11 @@
 from activex import ActiveX, activex_method
-import numpy as np
 import numpy.typing as npt
-import pandas as pd
 from option import Result,Ok
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 import datetime as DT
 from Crypto.Random import get_random_bytes
+# from activex.storage import StorageService
 # import base64
 
 class Cipher(ActiveX):
@@ -37,23 +36,22 @@ class Dog(ActiveX):
         self.name =name
  
     @activex_method
-    def bark(self, name:str="Paco",*args,**kwargs)->Result[str, Exception]:
-        dt = DT.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        # endpoint_id = self.get_endpoint_id()
-        return"{}: Woof woof barking to {} at {}".format(self.name,name,dt )
+    def bark(self,*args,**kwargs)->Result[str, Exception]:
+        name    = kwargs.get("name","Rex")
+        storage = kwargs.get("storage")
+        dt   = DT.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        response =  "{}: Woof woof barking to {} at {}".format(self.name,name,dt )
+        return Ok(response)
+    
     @activex_method
-    def bite(self, name:str="Paco",*args,**kwargs)->Result[str, Exception]:
+    def bite(self,*args,**kwargs)->Result[str, Exception]:
+        name = kwargs.get("name","Rex")
         return"{}:  biting {}".format(self.name,name)
     
 
     @activex_method
-    def get_name(self,name:str="PERRITO")->Result[str,Exception]:
-        return "{}-{}".format(self.name,name)
-
-    @activex_method
-    def get_df(self, df: pd.DataFrame= pd.DataFrame()):
-        return pd.concat([self.df,df]).reset_index(drop=True)
-    
+    def get_name(self)->Result[str,Exception]:
+        return "{}-{}".format(self.name)
     
 class Calculator(ActiveX):
     def __init__(self):

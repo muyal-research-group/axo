@@ -173,6 +173,11 @@ class LocalStorageService(StorageService):
 
 class AWSS3(StorageService):
     pass
+
+class DropboxStorageService(StorageService):
+    pass
+
+
 class MictlanXStorageService(StorageService):
     def __init__(self,
                   mictlanx_id:str="activex-mictlanx",

@@ -13,7 +13,7 @@ nanoid = "^2.0.0"
 pydantic = "^2.7.0"
 pyzmq = "^26.0.3"
 
-mictlanx = "^0.0.156"
+mictlanx = ">=0.0.150"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.1.1"
 more-itertools = "^10.2.0"

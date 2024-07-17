@@ -7,13 +7,16 @@ from weakref import WeakKeyDictionary
 from activex.storage.data import StorageService,ActiveX
 from activex.endpoint import EndpointX,XoloEndpointManager
 from activex.scheduler import Scheduler,Task
+from activex.import_manager import DefaultImportManager
 from option import Result,Err,Ok
 from queue import Queue
 from threading import Thread
 import logging
 import time as T
+import cloudpickle as CP
 
 logger = logging.getLogger(__name__)
+logger.propagate= False
 console_handler = logging.StreamHandler()
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 console_handler.setFormatter(formatter)
@@ -36,16 +39,16 @@ class ActiveXRuntime(ABC,Thread):
         self.is_distributed:bool = is_distributed
         self.inmemory_objects    = WeakKeyDictionary()
         self.remote_files        = set()
-        # self.middleware          = middleware
         self.storage_service     = storage_service
         self.q                   = q
         self.scheduler:Scheduler = scheduler
         self.is_running = True
         self.endpoint_manager= endpoint_manager
+        self.import_manager = DefaultImportManager()
         self.start()
     
     def get_active_object(self,bucket_id:str,key:str)->Result[ActiveX,Exception]:
-        return self.storage_service.__get_active_object(key=key,bucket_id=bucket_id)
+        return self.storage_service._get_active_object(key=key,bucket_id=bucket_id)
     def persistify(
             self,
             instance: ActiveX,
@@ -53,43 +56,55 @@ class ActiveXRuntime(ABC,Thread):
             key:Optional[str] = None,
     )->Result[str,Exception]:
         
-        instance_endpoint_id = instance.get_endpoint_id()
-        endpoint             = self.endpoint_manager.get_endpoint(endpoint_id=instance_endpoint_id )
-        # logger.debug({
-        #     "event":"GET.ENDPOINT",
-        #     "instance_endpoint_id":instance_endpoint_id,
-        #     "endpoint_id":endpoint.endpoint_id,
-        #     "hostname":endpoint.hostname,
-        #     "pubsub_port":endpoint.pubsub_port,
-        #     "req_res_port":endpoint.req_res_port
-        # })
-        # print("ENDPOINT",endpoint)
-        m_result = endpoint.put(
-            key=key,
-            metadata=instance._acx_metadata
-        )
-        if m_result.is_err:
+        try:
+            instance_endpoint_id = instance.get_endpoint_id()
+            endpoint             = self.endpoint_manager.get_endpoint(endpoint_id=instance_endpoint_id )
+            m_result = endpoint.put(
+                key=key,
+                metadata=instance._acx_metadata
+            )
+            if m_result.is_err:
+                logger.error({
+                    "event":"AXO.STORAGE.METADATA.FAILED",
+                    "axo_bucket_id":instance.get_axo_bucket_id(),
+                    "axo_key":instance.get_axo_key(),
+                })
+                return Err(Exception("Active object storage metadata failed: {}".format(str(m_result.unwrap_err()))))
+            class_def_put_result = self.storage_service.put(
+                bucket_id=bucket_id,
+                key="{}_class_def".format(key),
+                tags={
+                    "module":instance._acx_metadata.module,
+                    "class_name":instance._acx_metadata.class_name
+                },
+                data= CP.dumps(self.__class__)
+            )
+            class_def_key = class_def_put_result.unwrap()
+
+            tags = instance._acx_metadata.to_json_with_string_values()
+            tags["class_def_key"] = class_def_key
+            s_result = self.storage_service.put(
+                # obj=instance,
+                bucket_id=bucket_id,
+                key=key,
+                data= instance.to_bytes(),
+                tags=tags
+            )
+
+            if s_result.is_err:
+                logger.error({
+                    "event":"AXO.STORAGE.FAILED",
+                    "axo_bucket_id":instance.get_axo_bucket_id(),
+                    "axo_key":instance.get_axo_key(),
+                })
+                return Err(Exception("Active object storage failed: {}".format(str(s_result.unwrap_err()))))
+            return Ok(key)
+        except Exception as e:
             logger.error({
-                "event":"AXO.STORAGE.METADATA.FAILED",
-                "axo_bucket_id":instance.get_axo_bucket_id(),
-                "axo_key":instance.get_axo_key(),
+                "event":"PERSISTIFY.FAILED",
+                "msg":str(e)
             })
-            return Err(Exception("Active object storage metadata failed: {}".format(str(m_result.unwrap_err()))))
-        s_result = self.storage_service.put(
-            # obj=instance,
-            bucket_id=bucket_id,
-            key=key,
-            data= instance.to_bytes(),
-            tags=instance._acx_metadata.to_json_with_string_values()
-        )
-        if s_result.is_err:
-            logger.error({
-                "event":"AXO.STORAGE.FAILED",
-                "axo_bucket_id":instance.get_axo_bucket_id(),
-                "axo_key":instance.get_axo_key(),
-            })
-            return Err(Exception("Active object storage failed: {}".format(str(s_result.unwrap_err()))))
-        return Ok(key)
+            return Err(e)
             
         # logger.debug("%s persistify",key)
 

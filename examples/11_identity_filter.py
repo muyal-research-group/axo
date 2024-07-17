@@ -43,27 +43,29 @@ axcm = ActiveXContextManager.distributed(
 class IdentityFilter(FilterX):
     @activex_method
     def run(self, *args, **kwargs) -> FilterXOut:
-        source_bucket_id       = kwargs.get("source_bucket_id")
-        source_key             = kwargs.get("source_key")
-        sink_bucket_id         = kwargs.get("sink_bucket_id")
-        chunk_size             = kwargs.get("chunk_size","1MB")
-        storage:StorageService = kwargs.get("storage")
-        get_res = storage.get_streaming(bucket_id=source_bucket_id, key=source_key,chunk_size=chunk_size)
-        if get_res.is_ok:
-            (bytes_iter, metadata) = get_res.unwrap()
-            put_res = storage.put_streaming(
-                bukcet_id=sink_bucket_id,
-                key=source_key,
-                data= bytes_iter,
-                tags=metadata.get("tags",{})
+        try:
+            source_bucket_id       = kwargs.get("source_bucket_id")
+            source_key             = kwargs.get("source_key")
+            sink_bucket_id         = kwargs.get("sink_bucket_id")
+            chunk_size             = kwargs.get("chunk_size","1MB")
+            storage:StorageService = kwargs.get("storage")
+            get_res                = storage.get_streaming(bucket_id=source_bucket_id, key=source_key,chunk_size=chunk_size)
+            if get_res.is_ok:
+                (bytes_iter, metadata) = get_res.unwrap()
+                put_res = storage.put_streaming(
+                    bukcet_id=sink_bucket_id,
+                    key=source_key,
+                    data= bytes_iter,
+                    tags=metadata.get("tags",{})
+                )
+            return FilterXOut(
+                source_bukcet_id=source_bucket_id,
+                sink_bucket_id=sink_bucket_id,
+                response_time = 0
             )
-            print("PUT_RES", put_res)
-            print("_"*50)
-        return FilterXOut(
-            source_bukcet_id=source_bucket_id,
-            sink_bucket_id=sink_bucket_id,
-            response_time = 0
-        )
+        except Exception as e:
+            print("EXCEPTION",e)
+            return e
 
 if __name__ == "__main__":
     # Define the pattern

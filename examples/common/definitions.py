@@ -132,55 +132,10 @@ class Calculator(ActiveX):
         self.example_id = "02"
         self.x=x
         self.y=y
-        # self.key = "MY_KEY"
-        
+
+    @activex_method
+    def add(self,*args,**kwargs):
+        x=kwargs.get("x",0)
+        y=kwargs.get("y",1)
+        return x + y
     
-    def check_xy(self,x:OptionalFloat,y:OptionalFloat)->Tuple[float,float]:
-        if x == None:
-            _x = self.x
-        else:
-            _x  = x 
-        if y == None:
-            _y = self.y
-        else:
-            _y = y
-
-        return _x,_y        
-
-    @activex_method
-    def add(self,x:OptionalFloat=None,y:OptionalFloat=None):
-        _x,_y = self.check_xy(x,y)
-        return _x + _y
-    
-    @activex_method
-    def substract(self,x:OptionalFloat=None,y:OptionalFloat=None):
-        _x,_y = self.check_xy(x,y)
-        return _x - _y
-
-    @activex_method
-    def multiply(self,x:OptionalFloat=None,y:OptionalFloat=None):
-        _x,_y = self.check_xy(x,y)
-        return _x * _y
-    
-    @activex_method
-    def eloy_fybctuib():
-        pass
-
-    @activex_method
-    def divide(self,x:OptionalFloat=None,y:OptionalFloat=None):
-        _x,_y = self.check_xy(x,y)
-        if _y == 0:
-            raise ZeroDivisionError()
-        return _x / _y
-    @activex_method
-    def add_vectors(self,x:OptionalNDArray,y:OptionalNDArray):
-        if x == None:
-            _x = np.array([self.x])
-        else:
-            _x = x
-        if y == None:
-            _y= np.array([self.y])
-        else:
-            _y = y
-        res = _x+_y
-        return res
