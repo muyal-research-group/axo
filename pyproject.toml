@@ -1,15 +1,33 @@
 [tool.poetry]
 name = "activex"
-version = "0.1.0"
-description = ""
+version = "0.0.16"
+description = "ActiveX is an active object system designed to empower users with the ability to effortlessly create and manage highly available objects. ActiveX easily mix storage and processing."
 authors = ["Ignacio Castillo <ignacio.bcastillo@gmail.com>"]
 readme = "README.md"
-package-mode = false
+
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 cloudpickle = "^3.0.0"
+option = "^2.1.0"
+nanoid = "^2.0.0"
+pydantic = "^2.7.0"
+mictlanx = "^0.0.150"
+pyzmq = "^26.0.3"
 
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.1.1"
+more-itertools = "^10.2.0"
+pandas = "1.4.3"
+seaborn = "^0.13.2"
+rory = "0.0.143"
+
+galois = "^0.3.9"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[[tool.poetry.source]]
+name = "test"
+url = "https://test.pypi.org/simple/"
+priority = "supplemental"

@@ -1,4 +1,10 @@
 __pycache__/
+mictlanx.egg-info/
+mictlanx-env/
 build/
 dist/*
+.github/workflows/publish-to-test-pipy-backup.yml
 **/*.lock
+**/log
+**/*.npy
+**/publish.sh
