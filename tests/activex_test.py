@@ -1,23 +1,20 @@
 from typing import Dict
 import unittest
-from activex import ActiveX,activex_method
+from activex import Axo
 from activex.contextmanager.contextmanager import ActiveXContextManager
-from activex.endpoint import XoloEndpointManager,EndpointX,DistributedEndpoint
-# import cloudpickle as CP
-# from mictlanx.v4.client import Client
-# from mictlanx.utils.index import Utils
-from mictlanx.v4.interfaces.responses import PutResponse
-from concurrent.futures import ThreadPoolExecutor
+from activex.endpoint import XoloEndpointManager,EndpointX
+from activex.runtime.local import LocalRuntime
+from activex.storage.data import MictlanXStorageService
+from mictlanx.logger.tezcanalyticx.tezcanalyticx import TezcanalyticXParams
+
 from option import Result,Ok,Err
 import numpy as np
-import numpy.typing as npt
 import time as T
 import os
 import logging
 from .common import Dog,Calculator,Cipher
 from dotenv import load_dotenv
 from option import Some
-from mictlanx.logger.tezcanalyticx.tezcanalyticx import TezcanalyticXParams
 
 ENV_FILE_PATH = os.environ.get("ENV_FILE_PATH",-1)
 if not ENV_FILE_PATH == -1:
@@ -61,6 +58,21 @@ AXO_ENDPOINT_REQ_RES_PORT = int(os.environ.get("AXO_ENDPOINT_REQ_RES_PORT","1666
 
 class ActiveXTest(unittest.TestCase):
     
+    @unittest.skip("")
+    def test_hybrid_context(self):
+        axcm = ActiveXContextManager(
+            runtime= LocalRuntime(
+                storage_service= Some(MictlanXStorageService(
+                    log_path="/log",
+                ))
+            )
+        )
+        axcm.runtime.storage_service.put_bytes(
+            bucket_id ="test",
+            key="test_test",
+            data=b"HGOLLLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA!!"
+        )
+        print(axcm)
     @unittest.skip("")
     def test_local_context_layer_cipher(self):
         axcm    = ActiveXContextManager.local()
@@ -132,7 +144,7 @@ class ActiveXTest(unittest.TestCase):
                 sink_bucket_id = cipher.get_sink_bucket_id()
             )
             for i in range(np.random.randint(0,100)):
-                x = ActiveX.get_by_key(bucket_id=cipher.get_sink_bucket_id(), key= cipher.get_sink_key())
+                x = Axo.get_by_key(bucket_id=cipher.get_sink_bucket_id(), key= cipher.get_sink_key())
                 print(x)
             logger.debug({
                 "method":"decrypt",
@@ -156,7 +168,7 @@ class ActiveXTest(unittest.TestCase):
         bucket_id      = "39xoc05wyy0nunof"
         key            = "x3fxeow4f0wje3k5"
         
-        get_obj_result = ActiveX.get_by_key(bucket_id=bucket_id, key=key)
+        get_obj_result = Axo.get_by_key(bucket_id=bucket_id, key=key)
         
         if get_obj_result.is_ok:
             obj:Cipher = get_obj_result.unwrap()
@@ -232,7 +244,7 @@ class ActiveXTest(unittest.TestCase):
         ax     = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
         bucket_id = "hb2qlc4e1mrmxem3"
         key = "zlqp1xcjivjmfj83"
-        get_obj_result = ActiveX.get_by_key(bucket_id=bucket_id,key=key)
+        get_obj_result = Axo.get_by_key(bucket_id=bucket_id,key=key)
         if get_obj_result.is_ok:
             obj:Dog = get_obj_result.unwrap()
             res = obj.bark(name="Ignacio",sink_bucket_id = bucket_id)
@@ -306,7 +318,7 @@ class ActiveXTest(unittest.TestCase):
             )
         })
         _ = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
-        result = ActiveX.get_by_key("kvs74ah19gvr3r4d")
+        result = Axo.get_by_key("kvs74ah19gvr3r4d")
         if result.is_ok:
             obj = result.unwrap()
             fn = getattr(obj, "bark")
@@ -386,7 +398,7 @@ class ActiveXTest(unittest.TestCase):
         # handler  = ActiveXContextManager.distributed()
         obj:Dog = Dog.get_by_key(key="86h6tx5dkbkp579l")
         obj.bark()
-        return self.assertIsInstance(obj, ActiveX)
+        return self.assertIsInstance(obj, Axo)
 
     @unittest.skip("")
     def test_distributed_context_cipher(self):

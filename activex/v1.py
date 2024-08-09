@@ -1,6 +1,9 @@
 from __future__ import annotations
 from option import Result,Ok,Err
 import os
+import inspect
+import types 
+from typing import TypeVar,Generic,Any,Iterator,Tuple,Type
 import string
 import logging
 import re
@@ -14,13 +17,14 @@ from activex.runtime import get_runtime
 from mictlanx.logger.log import Log
 from activex.utils import serialize_and_yield_chunks
 import time as T
-
+import struct
+R = TypeVar('R')
 
 
 ALPHABET                  = string.ascii_lowercase+string.digits
 AXO_ID_SIZE               =int(os.environ.get("AXO_ID_SIZE","16"))
 AXO_DEBUG                 = bool(int(os.environ.get("AXO_DEBUG","1")))
-AXO_PRODUCTION_LOG_ENABLE = bool(int(os.environ.get("AXO_PRODUCTION_LOG_ENABLE","1")))
+AXO_PRODUCTION_LOG_ENABLE = bool(int(os.environ.get("AXO_PRODUCTION_LOG_ENABLE","0")))
 AXO_PROPERTY_PREFIX       = "_acx_property_"
 AXO_LOG_PATH              = os.environ.get("AXO_LOG_PATH","/activex/log")
 
@@ -42,20 +46,27 @@ else:
 
 
 
-def activex_method(f):
+def axo_method(f):
 
     @wraps(f)
-    def __activex(self:ActiveX,*args,**kwargs):
+    def __axo(self:Axo,*args,**kwargs):
         try:
             start_time                 = T.time()
             runtime                    = get_runtime()
+            self.set_endpoint_id(endpoint_id=runtime.endpoint_manager.get_endpoint().endpoint_id)
             endpoint                   = runtime.endpoint_manager.get_endpoint(endpoint_id= kwargs.get("endpoint_id",""))
             kwargs["endpoint_id"]      = endpoint.endpoint_id
-            kwargs["axo_key"]          = self.get_axo_key()
-            kwargs["axo_bucket_id"]    = self.get_axo_bucket_id()
-            kwargs["sink_bucket_id"]   = self.get_sink_bucket_id()
-            kwargs["source_bucket_id"] = self.get_source_bucket_id()
-            # kwargs = {**kwargs}
+            kwargs["axo_key"]          = kwargs.get("axo_key",self.get_axo_key())
+            kwargs["axo_bucket_id"]    = kwargs.get("axo_bucket_id",self.get_axo_bucket_id())
+            kwargs["sink_bucket_id"]   = kwargs.get("sink_bucket_id",self.get_sink_bucket_id())
+            kwargs["source_bucket_id"] = kwargs.get("source_bucket_id",self.get_source_bucket_id())
+            if not runtime.is_distributed:
+                kwargs["storage"] = runtime.storage_service
+
+            if runtime.is_distributed and self._acx_local:
+                self.persistify()
+            
+
 
             logger.debug({
                 "event":"METHOD.EXECUTION",
@@ -93,7 +104,8 @@ def activex_method(f):
         
         except Exception as e:
             logger.error(str(e))
-    return __activex
+    __axo.original = f
+    return __axo
 
 
 def generate_id(v:str)->str:
@@ -102,7 +114,6 @@ def generate_id(v:str)->str:
     return re.sub(r'[^a-z0-9_]', '', v)
 def generate_id_size(size:int=AXO_ID_SIZE):
     def __in(v:str)->str:
-        print(v,size)
         if v == None or v == "":
             return nanoid(alphabet=ALPHABET, size=size)
         return re.sub(r'[^a-z0-9_]', '', v)
@@ -110,7 +121,7 @@ def generate_id_size(size:int=AXO_ID_SIZE):
     # return generate_id(v=)
 
 
-ActiveXObjectId = Annotated[Optional[str], AfterValidator(generate_id_size(AXO_ID_SIZE))]
+AxoObjectId = Annotated[Optional[str], AfterValidator(generate_id_size(AXO_ID_SIZE))]
 
 class MetadataX(BaseModel):
     path:ClassVar[str]        = os.environ.get("ACTIVE_LOCAL_PATH","/activex/data")
@@ -119,7 +130,7 @@ class MetadataX(BaseModel):
     pivot_storage_node:Optional[str] = ""
     # replica_nodes:Set[str]           = Field(default_factory=set)
     is_read_only:bool      = False
-    axo_key:ActiveXObjectId = ""
+    axo_key:AxoObjectId = ""
     module:str
     name:str
     class_name:str 
@@ -156,15 +167,29 @@ class MetadataX(BaseModel):
 
         return json_data
 
-    # @validator("id", pre=True, always=True)
-    # def generate_id(cls, v):
-    #     return v if v is not None else nanoid(ALPHABET, size=ACTIVEX_OBJECT_ID_SIZE)
     
-class ActiveX:
+class Axo:
     _acx_metadata: MetadataX
     _acx_local:bool = True
     _acx_remote:bool = False
     
+    @staticmethod
+    def call(instance,method_name:str,*args,**kwargs)->Result[R,Exception]:
+        # print("methods",method_name,instance)
+        try:
+            if hasattr(instance,method_name):
+                value = getattr(instance, method_name)
+                is_callable = inspect.isfunction(value) or inspect.ismethod(value)
+                if is_callable:
+                    output = value(*args,**kwargs)
+                    return Ok(output)
+                else:
+                    return Ok(value)
+                # if 
+                # return Ok(value(*args,kwargs)) if  else Ok(value)
+            return Err(Exception("{} not found in the object instance.".format(method_name)))
+        except Exception as e:
+            return Err(e)
 
     def get_sink_path(self)->str:
         return "{}/{}".format(self._acx_metadata.sink_path,self.get_sink_bucket_id())
@@ -228,39 +253,20 @@ class ActiveX:
             return self.set_endpoint_id()
         return self._acx_metadata.endpoint_id
 
-    def __init_subclass__(cls, **kwargs):
-        pass
-        # logger.debug({
-        #     "event":"INIT.SUBCLASS",
-        #     "class_name":cls.__name__
-        # })
-        # logger.debug(f"Subclass {cls.__name__} created.")
-
+  
 
     def __new__(cls,*args,**kwargs):
         obj = super().__new__(cls)
-        class_name = cls.__module__ + "." + cls.__name__
+        # class_name = cls.__module__ + "." + cls.__name__
+        class_name = cls.__name__
         module = cls.__module__
         name = cls.__name__
         obj._acx_metadata = MetadataX(
             class_name= class_name,
             module= module,
             name= name,
-
-            # id= None
         )
-        runtime= get_runtime()
-        # obj.get_source_bucket_id()
-        # obj.get_sink_bucket_id()
-        obj.set_endpoint_id(endpoint_id=runtime.endpoint_manager.get_endpoint().endpoint_id)
-        # obj.get_sink_key()
-        # obj.get_sink_keys()
-        # logger.debug({
-        #     "event":"NEW",
-        #     "class_name":cls.__name__,
-        #     "module":module,
-        #     # "name":name
-        # })
+
         return obj
 
         
@@ -276,25 +282,115 @@ class ActiveX:
         # print(self.metadata)
         
 
-    def to_bytes(self):
-        return CP.dumps(self)
+    # def to_bytes(self):
+        # return CP.dumps(self)
+    def to_bytes(self)->bytes:
+        attrs            = self.__dict__
+        methods          = dict([ (attr,getattr(self, attr) )  for attr in dir(self) if callable(getattr(self, attr))])
+        attrs_bytes      = CP.dumps(attrs)
+        methods_bytes    = CP.dumps(methods)
+        class_def_bytes  = CP.dumps(self.__class__)
+        class_code_str   = inspect.getsource(self.__class__)
+        class_code_bytes = CP.dumps(class_code_str.encode())
+        # pack             = struct.pack(self._acx_format,attrs_bytes, methods_bytes, class_def_bytes,class_code_bytes)
+        # print(pack)
+        packed_data = b''
+        for data in (attrs_bytes, methods_bytes, class_def_bytes, class_code_bytes):
+            # Prefix each part with its length (using 4 bytes for the length)
+            packed_data += struct.pack('I', len(data)) + data
+        # print(packed_data)
+        return packed_data
+        # return (attrs_bytes,methods_bytes)
+        # return CP.dumps(self)
+
     def to_stream(self,chunk_size:str="1MB")->Generator[bytes,None,None]:
         return serialize_and_yield_chunks(obj=self, chunk_size=chunk_size)
+    # def t
+
 
     @staticmethod
-    def from_bytes(raw_obj:bytes):
-        return CP.loads(raw_obj)
+    def get_object_parts(raw_obj:bytes,original_f:bool=False)->Result[Tuple[
+        Dict[str, Any], # 
+        Dict[str, Any],
+        Type[Axo],
+        str 
+    ],Exception]:
+        try:
+            index = 0
+            unpacked_data = []
+            while index < len(raw_obj):
+                # Read length
+                length = struct.unpack_from('I', raw_obj, index)[0]
+                index += 4  # Move past the length field
+                # Read data
+                data = raw_obj[index:index+length]
+                index += length
+                unpacked_data.append(CP.loads(data))  # Deserialize each component
+            attrs    = unpacked_data[0]
+            methods = unpacked_data[1]
+            class_df = unpacked_data[2]
+            return Ok((attrs,methods,class_df,unpacked_data[-1]))
+            # instance:ActiveX = class_df()
+            # for attr_name, attr_value in attrs.items():
+            #     if attr_name not in ('__class__', '__dict__', '__module__', '__weakref__'):
+            #         setattr(instance, attr_name, attr_value)
+            # for method_name, func in methods.items():
+            #     if "original" in dir(func) and original_f:
+            #         func = func.original
+            #     bound_method = types.MethodType(func, instance)
+            #     if method_name not in ('__class__', '__dict__', '__module__', '__weakref__'):
+            #         setattr(instance, method_name, bound_method)
+            # # f0       = methods["test"].original
+            # return Ok(instance)
+        except Exception as e:
+            return Err(e)
+    @staticmethod
+    def from_bytes(raw_obj:bytes,original_f:bool=False)->Result[Axo,Exception]:
+        try:
+            index = 0
+            # Attrs, Methods, ClassDefinition, ClassCode
+            unpacked_data = []
+            while index < len(raw_obj):
+                # Read length
+                length = struct.unpack_from('I', raw_obj, index)[0]
+                index += 4  # Move past the length field
+                # Read data
+                data = raw_obj[index:index+length]
+                index += length
+                unpacked_data.append(CP.loads(data))  # Deserialize each component
+            attrs    = unpacked_data[0]
+            methods = unpacked_data[1]
+            class_df = unpacked_data[2]
+            instance:Axo = class_df()
+            for attr_name, attr_value in attrs.items():
+                if attr_name not in ('__class__', '__dict__', '__module__', '__weakref__'):
+                    setattr(instance, attr_name, attr_value)
+            for method_name, func in methods.items():
+                if "original" in dir(func) and original_f:
+                    func = func.original
+                bound_method = types.MethodType(func, instance)
+                if method_name not in ('__class__', '__dict__', '__module__', '__weakref__'):
+                    setattr(instance, method_name, bound_method)
+            # f0       = methods["test"].original
+            return Ok(instance)
+        except Exception as e:
+            return Err(e)
+        # return CP.loads(raw_obj)
     
     @staticmethod
-    def get_by_key(key:str,bucket_id:str="")->Result[ActiveX,Exception]:
-        return get_runtime().get_by_key(key=key,bucket_id=bucket_id)
+    def get_by_key(key:str,bucket_id:str="")->Result[Axo,Exception]:
+        return get_runtime().get_active_object(key=key,bucket_id=bucket_id)
 
+ 
     def persistify(self,bucket_id:str="",key:str="")->Result[str, Exception]:
         try:
             start_time = T.time()
             _key       = self.get_axo_key() if key == "" else key
             _bucket_id = self.get_axo_bucket_id() if bucket_id =="" else bucket_id
             runtime    = get_runtime()
+            endpoint = runtime.endpoint_manager.get_endpoint()
+            # print("ENDPOINT",endpoint.endpoint_id)
+            self.set_endpoint_id(endpoint_id=endpoint.endpoint_id)
             persistify_result = runtime.persistify(
                 instance  = self,
                 bucket_id = _bucket_id,
@@ -302,13 +398,19 @@ class ActiveX:
             )
             self._acx_remote = persistify_result.is_ok
             self._acx_local = persistify_result.is_err
-            logger.info({
-                "event":"PERSISTIFY",
-                "axo_bucket_id":_bucket_id,
-                "axo_key":_key,
-                "source_bucket_id":self.get_source_bucket_id(),
-                "sink_bucket_id":self.get_sink_bucket_id(),
-                "response_time":T.time()- start_time
+            if persistify_result.is_ok:
+                logger.info({
+                    "event":"PERSISTIFY",
+                    "axo_bucket_id":_bucket_id,
+                    "axo_key":_key,
+                    "source_bucket_id":self.get_source_bucket_id(),
+                    "sink_bucket_id":self.get_sink_bucket_id(),
+                    "response_time":T.time()- start_time
+                })
+                return persistify_result
+            logger.error({
+                "event":"PERSISTIFY.FAILED",
+                "reason":str(persistify_result.unwrap_err())
             })
             return persistify_result
         except Exception as e:
@@ -317,47 +419,3 @@ class ActiveX:
 
 
 
-
-# def resolve_annotations(self:ActiveX):
-#     runtime = get_runtime()
-#     logger.debug("RESOLVE_ANNOTATIONS {}".format(self))
-#     # cls = self.__class__
-#     attributes = self.__dict__
-#     # print(attributes)
-#     T.sleep(2)
-#     for attr_name, attr_value in attributes.items():
-#         # attr_type = type(attr_value)
-#         attr_type_hint = self.__annotations__.get(attr_name)
-#         # print("ATTR_TYPE",attr_type_hint)
-#         # Check if the annotated key is GetKey
-#         T.sleep(2)
-#         if attr_type_hint == Annotated[str,GetKey]:
-#             value = getattr(self,attr_name)
-#             logger.debug("GET {}".format(value))
-#             result = runtime.storage_service.get_data_to_file(
-#                 key=value
-#             )
-#             print("RESULT",result)
-#             T.sleep(2)
-#             if result.is_err:
-#                 logger.error("{} not found in the storage service".format(value))
-#                 # raise Exception("" .format(value))
-        
-#         # Check if the annotated key is PutPath
-#         if attr_type_hint == Annotated[str,PutPath]:
-#             value = getattr(self,attr_name)
-#             logger.debug("SCHEDULE.TASK {}".format(value))
-#             task = Task(
-#                 operation="PUT",
-#                 executed_at= T.time() + HF.parse_timespan(ACX_ENQUEUE_EXTRA_SECS) ,
-#                 metadata={
-#                     "path":value 
-#                 } 
-#             )
-#             # Schedule a put task.
-#             runtime.scheduler.schedule(
-#                 task=task
-#             )
-#     print("FINISH")
-#     T.sleep(5)
-            

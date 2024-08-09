@@ -1,0 +1,57 @@
+services:
+    activex-endpoint-0:
+        image: nachocode/activex:endpoint-0.0.22-alpha
+        container_name: activex-endpoint-0
+        ports:
+                - 16666:16666
+                - 16667:16667
+        environment:
+                - AXO_ENDPOINT_ID=activex-endpoint-0
+                - AXO_ENDPOINT_DEPENDENCIES=
+                - AXO_LOGGER_PATH=/log
+                - AXO_LOGGER_WHEN=h
+                - AXO_LOGGER_INTERVAL=24
+                - AXO_ENDPOINT_IMAGE=nachocode/activex:endpoint
+                - AXO_PROTOCOL=tcp
+                - AXO_PUB_SUB_PORT=16666
+                - AXO_REQ_RES_PORT=16667
+                - AXO_HOSTNAME=activex-endpoint-0
+                - AXO_ENDPOINTS=
+                - AXO_SOURCE_PATH=/source
+                - AXO_SINK_PATH=/sink
+                # MictlanX
+                - MICTLANX_XOLO_IP_ADDR=mictlanx-xolo-0
+                - MICTLANX_XOLO_API_VERSION=3
+                - MICTLANX_XOLO_NETWORK=10.0.0.0/25
+                - MICTLANX_XOLO_PORT=15000
+                - MICTLANX_XOLO_PROTOCOL=http
+                - MICTLANX_CLIENT_ID=activex-mictlanx-0
+                - MICTLANX_BUCKET_ID=activex
+                - MICTLANX_DEBUG=0
+                - MICTLANX_LOG_INTERVAL=24
+                - MICTLANX_LOG_WHEN=h
+                - MICTLANX_LOG_OUTPUT_PATH=/log
+                - MICTLANX_MAX_WORKERS=4
+                - MICTLANX_ROUTERS=mictlanx-router-0:mictlanx-router-0:60666
+                # Tezcanalyticx
+                - TEZCANALYTICX_FLUSH_TIMEOUT=10s
+                - TEZCANALYTICX_BUFFER_SIZE=100
+                - TEZCANALYTICX_HOSTNAME=tezcanalyticx-0
+                - TEZCANALYTICX_LEVEL=0
+                - TEZCANALYTICX_PATH=/api/v4/events
+                - TEZCANALYTICX_PORT=45000
+                - TEZCANALYTICX_PROTOCOL=http
+
+        volumes:
+                - activex-endpoint-0:/log
+                - activex-endpoint-0-source:/source
+                - activex-endpoint-0-sink:/sink
+        networks:
+                - mictlanx
+volumes:
+    activex-endpoint-0:
+    activex-endpoint-0-sink:
+    activex-endpoint-0-source:
+networks:
+    mictlanx:
+       external: true

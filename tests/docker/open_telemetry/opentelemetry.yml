@@ -1,0 +1,55 @@
+#version: '3.7'
+# To run a specific version of Jaeger, use environment variable, e.g.:
+#     JAEGER_VERSION=1.52 docker compose up
+
+services:
+  jaeger:
+    image: ${REGISTRY:-}jaegertracing/all-in-one:${JAEGER_VERSION:-latest}
+    restart: unless-stopped
+    ports:
+      - "16686:16686" # UI
+      - "4317:4317" # OTLP over gRPC
+      - "4318:4318" # OTLP over HTTP
+      - "5778:5778" # serve confings
+        #- "6831:6831/udp"
+        #- "6832:6832/udp"
+    environment:
+      - LOG_LEVEL=debug
+    networks:
+      - mictlanx
+  zipkin:
+    image: openzipkin/zipkin
+    ports:
+      - "9411:9411"
+    environment:
+      - JAVA_OPTS=-Xmx2g -Xms2g
+    restart: unless-stopped
+    networks:
+      - mictlanx
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - mictlanx
+
+  grafana:
+    image: grafana/grafana-enterprise
+    restart: unless-stopped
+    environment:
+      - GF_INSTALL_PLUGINS=
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - mictlanx
+volumes:
+  grafana-data:
+  prometheus-data:
+networks:
+  mictlanx:
+    external: true

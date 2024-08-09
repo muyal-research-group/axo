@@ -3,7 +3,7 @@ import humanfriendly as HF
 from typing import Any,TypeVar,Callable,List,Dict,Set
 import time as T
 import json as J
-from activex import ActiveX
+from activex import Axo
 from activex.storage.metadata import MetadataX
 import random
 from option import Result,Err,Ok
@@ -56,11 +56,15 @@ class EndpointX(ABC):
     def method_execution(self,
                          key:str,
                          fname:str,
-                         ao:ActiveX,
+                         ao:Axo,
                          f:GenericFunction = None, 
                          fargs:list=[],
                          fkwargs:dict={}
     )->Result[Any,Exception]:
+        return Err(Exception("No implemented yet."))
+    
+    @abstractmethod
+    def add_code(self,ao:Axo)->Result[bool, Exception]:
         return Err(Exception("No implemented yet."))
 
         
@@ -72,10 +76,10 @@ class LocalEndpoint(EndpointX):
         )
         self.__db  = {}
 
-    def put(self, key: str, value: MetadataX) -> Result[str, Exception]:
+    def put(self, key: str, metadata: MetadataX) -> Result[str, Exception]:
         try:
             if not key in self.__db:
-                self.__db[key] = value
+                self.__db[key] = metadata
             return Ok(key)
         except Exception as e:
             return Err(e)
@@ -83,9 +87,14 @@ class LocalEndpoint(EndpointX):
         if key in self.__db:
             return Ok(self.__db[key])
         return Err(Exception("Not found: {}".format(key)))
-    def method_execution(self,key:str,fname:str,ao:ActiveX,f:GenericFunction = None,fargs:list=[],fkwargs:dict={}) -> Result[Any, Exception]:
+    def method_execution(self,key:str,fname:str,ao:Axo,f:GenericFunction = None,fargs:list=[],fkwargs:dict={}) -> Result[Any, Exception]:
         try:
             return Ok(f(ao,*fargs, **fkwargs))
+        except Exception as e:
+            return Err(e)
+    def add_code(self, ao: Axo) -> Result[bool, Exception]:
+        try:
+            return Ok(False)
         except Exception as e:
             return Err(e)
         # return Err(Exception("No implemented yet."))
@@ -215,17 +224,9 @@ class DistributedEndpoint(EndpointX):
         except Exception as e:
             return J.loads(x)
         
-    def method_execution(self,key:str,fname:str,ao:ActiveX,f:GenericFunction,fargs:list=[],fkwargs:dict={}) -> Result[Any, Exception]:
+    def method_execution(self,key:str,fname:str,ao:Axo,f:GenericFunction,fargs:list=[],fkwargs:dict={}) -> Result[Any, Exception]:
         start_time = T.time()
         try:
-            # logger.debug("method_execution {} {}".format(key, fname))
-            # logger.debug({
-            #     "event":"METHOD.EXECUTION",
-            #     # "sink_bucket_id":ao.get_sink_bucket_id(), 
-            #     # # "sink_key":"{}{}".format(fname,ao.get_sink_key()),
-            #     "function_name":fname,
-            #     # **fkwargs
-            # })
             payload = {
                 "key":key,
                 "fname":fname
@@ -233,7 +234,7 @@ class DistributedEndpoint(EndpointX):
             payload_bytes = J.dumps(payload).encode(self.encoding)
 
             f_bytes = CP.dumps(f)
-            self.reqres_socket.send_multipart([b"activex",b"METHOD.EXEC", payload_bytes, f_bytes,CP.dumps(fargs), CP.dumps(fkwargs)])
+            self.reqres_socket.send_multipart([b"activex",b"METHOD.EXEC", payload_bytes, f_bytes,CP.dumps(fargs[1:]), CP.dumps(fkwargs)])
             response_multipart = self.reqres_socket.recv_multipart()
             if len(response_multipart) == 5:
                 topic_bytes,operation_bytes,status_bytes,metadata_bytes, result_bytes  = response_multipart
@@ -242,7 +243,6 @@ class DistributedEndpoint(EndpointX):
                 operation       = operation_bytes.decode()
                 status          = int.from_bytes(bytes=status_bytes, byteorder="little",signed=True )
                 result          = self.__deserialize(x= result_bytes)
-                # CP.loads(result_bytes)
                 result_metadata = J.loads(metadata_bytes)
                 
                 logger.info({
@@ -258,13 +258,25 @@ class DistributedEndpoint(EndpointX):
                 return Ok(result)
             else:
                 return Err(Exception("Not expected response: {}".format(len(response_multipart))))
-            # logger.debug(str(response))
-            # return Ok(key)
         except Exception as e:
             return Err(e)
-        # return super().method_execution()
     
-    
+    def add_code(self, ao: Axo) -> Result[bool, Exception]:
+        start_time = T.time()
+        try:
+            payload = {
+                "module":ao._acx_metadata.class_name, 
+                "class_name":ao._acx_metadata.class_name,
+                "axo_bucket_id": ao._acx_metadata.axo_bucket_id,
+                "class_def_key":"{}_class_def".format(ao._acx_metadata.axo_key)
+            }
+            payload_bytes = J.dumps(payload).encode(self.encoding)
+            self.reqres_socket.send_multipart([b"activex",b"ADD.CODE",payload_bytes])
+            logger.info
+            return Ok(False)
+        except Exception as e:
+            return Err(e)
+
     def to_string(self):
         return "{}:{}:{}:{}:{}".format(self.endpoint_id,self.protocol,self.hostname,self.req_res_port,self.pubsub_port)
     @staticmethod
