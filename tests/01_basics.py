@@ -31,7 +31,7 @@ class AxoBasics(UT.TestCase):
         cls.exponential_dist  = S.expon(loc = cls.AVG_INTERVAL_TIME)
         cls.MAX_DOWNLOADS     = 100
         cls.MAX_CONCURRENCY   = 4
-        cls.MAX_NUM_AOS       = 1000
+        cls.MAX_ACTIVE_OBJECTS       = 1000
 
         # Create an endpoint manager instance
         cls.endpoint_manager = XoloEndpointManager()
@@ -55,7 +55,7 @@ class AxoBasics(UT.TestCase):
             cancel_futures=True
         )
 
-    @UT.skip("")
+    # @UT.skip("")
     def test_create_ao(self):
         
         # Init the distributed context manager
@@ -85,7 +85,7 @@ class AxoBasics(UT.TestCase):
         
         with AxoBasics.thread_pool as executor:
             futures = []
-            for i in range(AxoBasics.MAX_NUM_AOS):
+            for i in range(AxoBasics.MAX_ACTIVE_OBJECTS):
                 fut = executor.submit(__create_ao,i)
                 futures.append(fut)
                 T.sleep(AxoBasics.exponential_dist.rvs())

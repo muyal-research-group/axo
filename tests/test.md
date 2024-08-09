@@ -22,8 +22,10 @@ docker compose -f ./docker/open_telemetry/opentelemetry.yml -p opentelemetry up 
 ```
 
 3. You must deploy an endpoint 
+```bash
+docker compose -f ./docker/axo/axo-endpoint.yml -p axo up -d 
 ```
-```
+
 
 ## Test 1: Create and save an active object
 In this example we create and save an active object in a distributed exeution environment. 
@@ -67,3 +69,26 @@ res = rex.persistify()
 ```
 
 ## Test 2: Create N active objects
+This demo generate ```AXO_MAX_ACTIVE_OBJECTS``` you must set a value in the ```setupUpClass``` method, the following variables  are the available in that metho:
+
+```py
+cls.AVG_INTERVAL_TIME = 1/10000000
+cls.exponential_dist  = S.expon(loc = cls.AVG_INTERVAL_TIME)
+cls.MAX_DOWNLOADS     = 100
+cls.MAX_CONCURRENCY   = 4
+cls.MAX_NUM_AOS       = 1000
+```
+
+⚠️ Pay attention to the generate folder ```./out``` you wanna use it in the ```Test 3```
+
+## Test 3: Get N objects by M consumers:
+
+First you must parse it the log files generate in ```./log``` folder using the following command:
+
+```sh
+chmod +x ./parse_logs.sh && ./parse_logs.sh
+```
+
+This is gonna store at ```./out``` the ```out.json``` that is the input of this demo.
+
+
