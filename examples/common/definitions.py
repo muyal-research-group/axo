@@ -1,4 +1,4 @@
-from activex import ActiveX, activex_method
+from activex import Axo, axo_method
 
 import numpy.typing as npt
 import numpy as np
@@ -11,7 +11,7 @@ import math
 OptionalFloat = Optional[float]
 OptionalNDArray = Optional[npt.NDArray]
 
-class Perceptron(ActiveX):
+class Perceptron(Axo):
     #Initialization
     def __init__(self, learning_rate=0.01, activation=None, epochs=100):
         self.n = learning_rate
@@ -120,7 +120,7 @@ class Perceptron(ActiveX):
                 y.append(dataSet[i][-1])
         return y
 
-class Calculator(ActiveX):
+class Calculator(Axo):
     """
         Calculator:
         add(float,float): Add two float numbers
@@ -133,7 +133,7 @@ class Calculator(ActiveX):
         self.x=x
         self.y=y
 
-    @activex_method
+    @axo_method
     def add(self,*args,**kwargs):
         x=kwargs.get("x",0)
         y=kwargs.get("y",1)

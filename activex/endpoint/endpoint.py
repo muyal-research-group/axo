@@ -3,7 +3,7 @@ import humanfriendly as HF
 from typing import Any,TypeVar,Callable,List,Dict,Set
 import time as T
 import json as J
-from activex import ActiveX
+from activex import Axo
 from activex.storage.metadata import MetadataX
 import random
 from option import Result,Err,Ok
@@ -56,7 +56,7 @@ class EndpointX(ABC):
     def method_execution(self,
                          key:str,
                          fname:str,
-                         ao:ActiveX,
+                         ao:Axo,
                          f:GenericFunction = None, 
                          fargs:list=[],
                          fkwargs:dict={}
@@ -64,7 +64,7 @@ class EndpointX(ABC):
         return Err(Exception("No implemented yet."))
     
     @abstractmethod
-    def add_code(self,ao:ActiveX)->Result[bool, Exception]:
+    def add_code(self,ao:Axo)->Result[bool, Exception]:
         return Err(Exception("No implemented yet."))
 
         
@@ -87,12 +87,12 @@ class LocalEndpoint(EndpointX):
         if key in self.__db:
             return Ok(self.__db[key])
         return Err(Exception("Not found: {}".format(key)))
-    def method_execution(self,key:str,fname:str,ao:ActiveX,f:GenericFunction = None,fargs:list=[],fkwargs:dict={}) -> Result[Any, Exception]:
+    def method_execution(self,key:str,fname:str,ao:Axo,f:GenericFunction = None,fargs:list=[],fkwargs:dict={}) -> Result[Any, Exception]:
         try:
             return Ok(f(ao,*fargs, **fkwargs))
         except Exception as e:
             return Err(e)
-    def add_code(self, ao: ActiveX) -> Result[bool, Exception]:
+    def add_code(self, ao: Axo) -> Result[bool, Exception]:
         try:
             return Ok(False)
         except Exception as e:
@@ -224,7 +224,7 @@ class DistributedEndpoint(EndpointX):
         except Exception as e:
             return J.loads(x)
         
-    def method_execution(self,key:str,fname:str,ao:ActiveX,f:GenericFunction,fargs:list=[],fkwargs:dict={}) -> Result[Any, Exception]:
+    def method_execution(self,key:str,fname:str,ao:Axo,f:GenericFunction,fargs:list=[],fkwargs:dict={}) -> Result[Any, Exception]:
         start_time = T.time()
         try:
             payload = {
@@ -261,7 +261,7 @@ class DistributedEndpoint(EndpointX):
         except Exception as e:
             return Err(e)
     
-    def add_code(self, ao: ActiveX) -> Result[bool, Exception]:
+    def add_code(self, ao: Axo) -> Result[bool, Exception]:
         start_time = T.time()
         try:
             payload = {

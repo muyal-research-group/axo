@@ -1,7 +1,7 @@
 from abc import ABC,abstractmethod
 import logging
 import humanfriendly as HF
-from activex import ActiveX
+from activex import Axo
 from mictlanx.v4.client import Client
 from mictlanx.utils.index import Utils
 from mictlanx.logger.tezcanalyticx.tezcanalyticx import TezcanalyticXHttpHandler,TezcanalyticXParams
@@ -42,7 +42,7 @@ class StorageService(ABC):
     def get_streaming(self,bucket_id:str,key:str,chunk_size:str="1MB")->Result[Tuple[Iterator[bytes], Dict[str,Any]], Exception]:
         pass
     @abstractmethod
-    def _get_active_object(self,key:str,bucket_id:str)->Result[ActiveX, Exception]:
+    def _get_active_object(self,key:str,bucket_id:str)->Result[Axo, Exception]:
         pass
     
     # @abstractmethod
@@ -157,7 +157,7 @@ class LocalStorageService(StorageService):
 
         # return super().get(bucket_id, key, chunk_size)
 
-    def _get_active_object(self, key: str,bucket_id:str="")->Result[ActiveX, Exception]:
+    def _get_active_object(self, key: str,bucket_id:str="")->Result[Axo, Exception]:
         base_path = os.environ.get("ACTIVEX_SINK_PATH","/sink")
         base_path = "{}/{}".format(base_path,bucket_id)
         os.makedirs(base_path, exist_ok=True)
@@ -165,7 +165,7 @@ class LocalStorageService(StorageService):
         logger.debug("GET %s %s", key, path)
         with open(path,"rb") as f :
             data = f.read()
-            return ActiveX.from_bytes(raw_obj=data)
+            return Axo.from_bytes(raw_obj=data)
     
     # def get_data_to_file(self,key:str,bucket_id:str="",filename:str="",output_path:str="/activex/data")->Result[str, Exception]:
         # return Err(Exception("get_data_to_file not implemented"))
@@ -277,7 +277,7 @@ class MictlanXStorageService(StorageService):
         except Exception as e:
             return Err(e)
         # return super().get(bucket_id, key, chunk_size)
-    def _get_active_object(self,key:str,bucket_id:str="")->Result[ActiveX,Exception]:
+    def _get_active_object(self,key:str,bucket_id:str="")->Result[Axo,Exception]:
         response_size = 0 
         while response_size ==0:
             result:Result[InterfaceX.GetBytesResponse,Exception]= self.client.get_with_retry(
@@ -294,7 +294,7 @@ class MictlanXStorageService(StorageService):
                     "response_size":response_size
                 })
                 continue
-            return ActiveX.from_bytes(response.value)
+            return Axo.from_bytes(raw_obj=response.value)
     # def get_data_to_file(self, key: str,bucket_id:str="",filename:str="",output_path:str="/activex/data",chunk_size:str="1MB") -> Result[str, Exception]:
         # try:
             # return self.client.get_to_file(key=key,bucket_id=bucket_id,filename=filename,output_path=output_path,chunk_size=chunk_size)

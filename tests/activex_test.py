@@ -1,6 +1,6 @@
 from typing import Dict
 import unittest
-from activex import ActiveX
+from activex import Axo
 from activex.contextmanager.contextmanager import ActiveXContextManager
 from activex.endpoint import XoloEndpointManager,EndpointX
 from activex.runtime.local import LocalRuntime
@@ -144,7 +144,7 @@ class ActiveXTest(unittest.TestCase):
                 sink_bucket_id = cipher.get_sink_bucket_id()
             )
             for i in range(np.random.randint(0,100)):
-                x = ActiveX.get_by_key(bucket_id=cipher.get_sink_bucket_id(), key= cipher.get_sink_key())
+                x = Axo.get_by_key(bucket_id=cipher.get_sink_bucket_id(), key= cipher.get_sink_key())
                 print(x)
             logger.debug({
                 "method":"decrypt",
@@ -168,7 +168,7 @@ class ActiveXTest(unittest.TestCase):
         bucket_id      = "39xoc05wyy0nunof"
         key            = "x3fxeow4f0wje3k5"
         
-        get_obj_result = ActiveX.get_by_key(bucket_id=bucket_id, key=key)
+        get_obj_result = Axo.get_by_key(bucket_id=bucket_id, key=key)
         
         if get_obj_result.is_ok:
             obj:Cipher = get_obj_result.unwrap()
@@ -244,7 +244,7 @@ class ActiveXTest(unittest.TestCase):
         ax     = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
         bucket_id = "hb2qlc4e1mrmxem3"
         key = "zlqp1xcjivjmfj83"
-        get_obj_result = ActiveX.get_by_key(bucket_id=bucket_id,key=key)
+        get_obj_result = Axo.get_by_key(bucket_id=bucket_id,key=key)
         if get_obj_result.is_ok:
             obj:Dog = get_obj_result.unwrap()
             res = obj.bark(name="Ignacio",sink_bucket_id = bucket_id)
@@ -318,7 +318,7 @@ class ActiveXTest(unittest.TestCase):
             )
         })
         _ = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
-        result = ActiveX.get_by_key("kvs74ah19gvr3r4d")
+        result = Axo.get_by_key("kvs74ah19gvr3r4d")
         if result.is_ok:
             obj = result.unwrap()
             fn = getattr(obj, "bark")
@@ -398,7 +398,7 @@ class ActiveXTest(unittest.TestCase):
         # handler  = ActiveXContextManager.distributed()
         obj:Dog = Dog.get_by_key(key="86h6tx5dkbkp579l")
         obj.bark()
-        return self.assertIsInstance(obj, ActiveX)
+        return self.assertIsInstance(obj, Axo)
 
     @unittest.skip("")
     def test_distributed_context_cipher(self):

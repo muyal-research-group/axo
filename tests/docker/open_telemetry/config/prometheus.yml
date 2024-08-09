@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 15s  # How often to scrape targets by default.
+
+scrape_configs:
+  - job_name: 'mictlanx-router'
+    scrape_interval: 5s  # How often to scrape this specific job.
+    metrics_path: '/metrics'  # Path to scrape metrics from.
+    static_configs:
+      - targets: ['mictlanx-router-0:60666']  # Address of the FastAPI application.

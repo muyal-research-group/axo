@@ -1,6 +1,6 @@
 
 import time as T
-from activex import ActiveX,activex_method
+from activex import Axo,axo_method
 from typing import Generator,Any,List,Dict
 from activex.contextmanager import ActiveXContextManager
 import humanfriendly as  HF
@@ -44,10 +44,10 @@ client = MictlanXClient(
 #         return Context()
 
 
-class Splitter(ActiveX):
+class Splitter(Axo):
     def __init__(self):
         pass
-    @activex_method
+    @axo_method
     def to_chunks(self,*args,**kwargs):
         storage:StorageService            = kwargs.get("mictlanx")
         chunk_size                        = kwargs.get("chunk_size","1MB")

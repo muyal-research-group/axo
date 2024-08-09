@@ -8,7 +8,7 @@ import more_itertools as mit
 import sys
 # 
 import time as T
-from activex import ActiveX,activex_method
+from activex import Axo,axo_method
 from activex.storage.mictlanx import GetKey,PutPath
 from typing import Annotated, Dict,Generator,Tuple
 import numpy.typing as npt  
@@ -33,7 +33,7 @@ ALPHABET = string.digits+ string.ascii_lowercase
 args = sys.argv[1:]
 
 
-class SkmeanX(ActiveX):
+class SkmeanX(Axo):
     # encrypted_data_id:Annotated[str,GetKey]
     # udm_id:Annotated[str,GetKey]
     def __init__(self,
@@ -48,7 +48,7 @@ class SkmeanX(ActiveX):
         self.he_id = he_id
         self.k = k
         self.m = m
-    @activex_method
+    @axo_method
     def run(self,status:int=0):
         skmeans =SKMeans()
         h3_result = HomomorphicCipher.get_by_key(key=self.he_id )
@@ -63,7 +63,7 @@ class SkmeanX(ActiveX):
         # udm = np.load("/activex/data/{}.npy".format(self.udm_id))
     
 
-class HomomorphicCipher(ActiveX):
+class HomomorphicCipher(Axo):
     encrypted_data_path:Annotated[str,PutPath] 
     udm_path:Annotated[str,PutPath] 
     # = "/activex/data/encrypted_chunk.npy"
@@ -78,13 +78,13 @@ class HomomorphicCipher(ActiveX):
         self.udm = None
         self.encrypted_chunk = None
     
-    @activex_method
+    @axo_method
     def liu_encrypt(self)->npt.NDArray:
         x = self.dataowner.liu_encrypt_matrix_chunk(plaintext_matrix=self.plaintext)
         np.save(self.encrypted_data_path, x)
         self.encrypted_chunk = x
         return x
-    @activex_method
+    @axo_method
     def calculate_udm(self,mode:str="diff")->npt.NDArray:
         x= self.dataowner.calculate_UDM(plaintext_matrix= self.plaintext,mode=mode)
         np.save(self.udm_path, x)
@@ -93,7 +93,7 @@ class HomomorphicCipher(ActiveX):
     
         
 
-class Slicer(ActiveX):
+class Slicer(Axo):
     input_data_id:Annotated[str,GetKey] 
 
     def __init__(self,input_data_id:Annotated[str,GetKey],format:str = "npy",chunk_prefix:str = nanoid(alphabet=ALPHABET)):
@@ -115,7 +115,7 @@ class Slicer(ActiveX):
             chunk = array[start:end]
             yield i,chunk
             # print(chunk)
-    @activex_method
+    @axo_method
     def slice(self,shape:Tuple[int,int],dtype:str="float32",num_chunks:int=2)->Generator[Tuple[int, npt.NDArray], None,None]:
         if self.format == "csv":
             reader = pd.read_csv(self.path,chunksize=num_chunks)

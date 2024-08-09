@@ -1,5 +1,5 @@
 import time as T
-from activex import ActiveX,activex_method
+from activex import Axo,axo_method
 from typing import Generator,Any,List,Dict
 from activex.contextmanager import ActiveXContextManager
 import humanfriendly as  HF
@@ -28,7 +28,7 @@ SOURCE_PATH                = os.environ.get("SOURCE_PATH","./source")
 class SplitterFilter(FilterX):
     def __init__(self):
         pass
-    @activex_method
+    @axo_method
     def run(self, *args, **kwargs) -> FilterXOut:
         sink_bucket_id = kwargs.get({"sink_bucket_id"})
         source_bucket_id = kwargs.get("source_bucket_id")

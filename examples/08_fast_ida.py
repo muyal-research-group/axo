@@ -1,5 +1,5 @@
 import time as T
-from activex import ActiveX,activex_method
+from activex import Axo,axo_method
 from typing import Generator,Any,List
 from activex.contextmanager import ActiveXContextManager
 import humanfriendly as  HF

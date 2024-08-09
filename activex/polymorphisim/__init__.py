@@ -3,7 +3,7 @@ from abc import ABC,abstractmethod
 from nanoid import generate as nanoid
 import string 
 from dataclasses import dataclass
-from activex import ActiveX
+from activex import Axo
 from option import Result, Ok,Err
 from enum import Enum
 from typing import List
@@ -70,7 +70,7 @@ class FilterXOut:
     sink_bucket_id:str   = nanoid(alphabet=ALPHABET,size=16)
     response_time:int    = -1
 
-class FilterX(ActiveX,ABC):
+class FilterX(Axo,ABC):
     def __init__(self,source:SourceX =BucketSource(), sink:SinkX = BucketSink()):
         self.source = source
         self.sink   =  sink

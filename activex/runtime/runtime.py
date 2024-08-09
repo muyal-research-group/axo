@@ -4,7 +4,7 @@ from nanoid import generate as nanoid
 import string
 from weakref import WeakKeyDictionary
 # from activex.storage.metadata import MetadataService
-from activex.storage.data import StorageService,ActiveX
+from activex.storage.data import StorageService,Axo
 from activex.endpoint import EndpointX,XoloEndpointManager
 from activex.scheduler import Scheduler,Task
 from activex.import_manager import DefaultImportManager
@@ -47,11 +47,11 @@ class ActiveXRuntime(ABC,Thread):
         self.import_manager = DefaultImportManager()
         self.start()
     
-    def get_active_object(self,bucket_id:str,key:str)->Result[ActiveX,Exception]:
+    def get_active_object(self,bucket_id:str,key:str)->Result[Axo,Exception]:
         return self.storage_service._get_active_object(key=key,bucket_id=bucket_id)
     def persistify(
             self,
-            instance: ActiveX,
+            instance: Axo,
             bucket_id:Optional[str] = None,
             key:Optional[str] = None,
     )->Result[str,Exception]:

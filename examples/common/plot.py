@@ -4,10 +4,10 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from typing_extensions import Annotated
-from activex import ActiveX,activex_method
+from activex import Axo,axo_method
 from activex.storage.mictlanx import GetKey,PutPath
 
-class HeatmapProducer(ActiveX):
+class HeatmapProducer(Axo):
     input_data_key:Annotated[str, GetKey] = "2a45605714f82cd082c0b607cca6b0aff36ba5383a8498021be7fa8328e8e3ac"
     heatmap_output_path:Annotated[str,PutPath] 
 
@@ -26,7 +26,7 @@ class HeatmapProducer(ActiveX):
         self.heatmap_output_path = output_path
 
 
-    @activex_method
+    @axo_method
     def plot(self,cas:str):
         df = self.df
         sustancia_nombre = df["sustancia"].iloc[0]

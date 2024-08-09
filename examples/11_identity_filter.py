@@ -1,6 +1,6 @@
 from activex.polymorphisim import FilterX, PipeAndFilter, BucketSink,BucketSource,FilterXOut
 import time as T
-from activex import ActiveX,activex_method
+from activex import Axo,axo_method
 from typing import Generator,Any,List,Dict
 from activex.contextmanager import ActiveXContextManager
 import humanfriendly as  HF
@@ -41,7 +41,7 @@ axcm = ActiveXContextManager.distributed(
 
 
 class IdentityFilter(FilterX):
-    @activex_method
+    @axo_method
     def run(self, *args, **kwargs) -> FilterXOut:
         try:
             source_bucket_id       = kwargs.get("source_bucket_id")

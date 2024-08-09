@@ -46,10 +46,10 @@ else:
 
 
 
-def activex_method(f):
+def axo_method(f):
 
     @wraps(f)
-    def __activex(self:ActiveX,*args,**kwargs):
+    def __axo(self:Axo,*args,**kwargs):
         try:
             start_time                 = T.time()
             runtime                    = get_runtime()
@@ -104,8 +104,8 @@ def activex_method(f):
         
         except Exception as e:
             logger.error(str(e))
-    __activex.original = f
-    return __activex
+    __axo.original = f
+    return __axo
 
 
 def generate_id(v:str)->str:
@@ -121,7 +121,7 @@ def generate_id_size(size:int=AXO_ID_SIZE):
     # return generate_id(v=)
 
 
-ActiveXObjectId = Annotated[Optional[str], AfterValidator(generate_id_size(AXO_ID_SIZE))]
+AxoObjectId = Annotated[Optional[str], AfterValidator(generate_id_size(AXO_ID_SIZE))]
 
 class MetadataX(BaseModel):
     path:ClassVar[str]        = os.environ.get("ACTIVE_LOCAL_PATH","/activex/data")
@@ -130,7 +130,7 @@ class MetadataX(BaseModel):
     pivot_storage_node:Optional[str] = ""
     # replica_nodes:Set[str]           = Field(default_factory=set)
     is_read_only:bool      = False
-    axo_key:ActiveXObjectId = ""
+    axo_key:AxoObjectId = ""
     module:str
     name:str
     class_name:str 
@@ -168,7 +168,7 @@ class MetadataX(BaseModel):
         return json_data
 
     
-class ActiveX:
+class Axo:
     _acx_metadata: MetadataX
     _acx_local:bool = True
     _acx_remote:bool = False
@@ -312,7 +312,7 @@ class ActiveX:
     def get_object_parts(raw_obj:bytes,original_f:bool=False)->Result[Tuple[
         Dict[str, Any], # 
         Dict[str, Any],
-        Type[ActiveX],
+        Type[Axo],
         str 
     ],Exception]:
         try:
@@ -345,7 +345,7 @@ class ActiveX:
         except Exception as e:
             return Err(e)
     @staticmethod
-    def from_bytes(raw_obj:bytes,original_f:bool=False)->Result[ActiveX,Exception]:
+    def from_bytes(raw_obj:bytes,original_f:bool=False)->Result[Axo,Exception]:
         try:
             index = 0
             # Attrs, Methods, ClassDefinition, ClassCode
@@ -361,7 +361,7 @@ class ActiveX:
             attrs    = unpacked_data[0]
             methods = unpacked_data[1]
             class_df = unpacked_data[2]
-            instance:ActiveX = class_df()
+            instance:Axo = class_df()
             for attr_name, attr_value in attrs.items():
                 if attr_name not in ('__class__', '__dict__', '__module__', '__weakref__'):
                     setattr(instance, attr_name, attr_value)
@@ -378,7 +378,7 @@ class ActiveX:
         # return CP.loads(raw_obj)
     
     @staticmethod
-    def get_by_key(key:str,bucket_id:str="")->Result[ActiveX,Exception]:
+    def get_by_key(key:str,bucket_id:str="")->Result[Axo,Exception]:
         return get_runtime().get_active_object(key=key,bucket_id=bucket_id)
 
  
