@@ -71,9 +71,9 @@ if __name__ == "__main__":
     # Define the pattern
     paf = PipeAndFilter()
     # Add source
-    paf.add_source(source = BucketSource("xxx"))
+    paf.set_source(source = BucketSource("xxx"))
     # Add sink
-    paf.add_sink(sink = BucketSink("yyy"))
+    paf.set_sink(sink = BucketSink("yyy"))
     # Add a filter
     paf.add_filter(IdentityFilter())
     paf.add_filter(IdentityFilter())

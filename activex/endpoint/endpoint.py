@@ -66,7 +66,16 @@ class EndpointX(ABC):
     @abstractmethod
     def add_code(self,ao:Axo)->Result[bool, Exception]:
         return Err(Exception("No implemented yet."))
+    @abstractmethod
+    def add_class_definition(self,class_def:Any,bucket_id:str="",key:str="") -> Result[bool, Exception]:
+        return Err(Exception("No implemented yet."))
+    @abstractmethod
+    def task_execution(self,task_function:GenericFunction,payload:Dict[str,Any]={}):
+        return Err(Exception("No implemented yet."))
 
+        
+
+        
         
 
 class LocalEndpoint(EndpointX):
@@ -97,6 +106,10 @@ class LocalEndpoint(EndpointX):
             return Ok(False)
         except Exception as e:
             return Err(e)
+    def add_class_definition(self, class_def: Any, bucket_id: str = "", key: str = "") -> Result[bool, Exception]:
+        return super().add_class_definition(class_def, bucket_id, key)
+    def task_execution(self,task_function:GenericFunction, payload: Dict[str, Any] = {})->Result[Any, Exception]:
+        return super().task_execution(payload=payload,task_function=task_function)
         # return Err(Exception("No implemented yet."))
     
 class DistributedEndpoint(EndpointX):
@@ -272,11 +285,30 @@ class DistributedEndpoint(EndpointX):
             }
             payload_bytes = J.dumps(payload).encode(self.encoding)
             self.reqres_socket.send_multipart([b"activex",b"ADD.CODE",payload_bytes])
-            logger.info
+            # logger.info
             return Ok(False)
         except Exception as e:
             return Err(e)
-
+    def add_class_definition(self,class_def:Any,bucket_id: str = "", key: str = "") -> Result[bool, Exception]:
+        try:
+            payload = {
+            }
+            payload_bytes      = J.dumps(payload).encode(self.encoding)
+            class_def_bytes    = CP.dumps(class_def)
+            self.reqres_socket.send_multipart([b"activex",b"ADD.CLASS.DEF",payload_bytes, class_def_bytes])
+            response_multipart = self.reqres_socket.recv_multipart()
+            print(response_multipart)
+        except Exception as e:
+            return Err(e)
+    def task_execution(self,task_function:GenericFunction, payload: Dict[str, Any] = {}):
+        try:
+            payload_bytes = J.dumps(payload).encode(self.encoding)
+            self.reqres_socket.send_multipart([b"activex",b"MW",payload_bytes,CP.dumps(task_function)])
+            response = self.reqres_socket.recv_multipart()
+            print("TASK.EXECUITION", response)
+        except Exception as e:
+            return Err(e)
+        # return super().task_execution(payload)
     def to_string(self):
         return "{}:{}:{}:{}:{}".format(self.endpoint_id,self.protocol,self.hostname,self.req_res_port,self.pubsub_port)
     @staticmethod

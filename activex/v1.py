@@ -108,6 +108,82 @@ def axo_method(f):
     return __axo
 
 
+def axo_task(f):
+
+    @wraps(f)
+    def __axo(self:Axo,*args,**kwargs):
+        try:
+            start_time                 = T.time()
+            runtime                    = get_runtime()
+            self.set_endpoint_id(endpoint_id=runtime.endpoint_manager.get_endpoint().endpoint_id)
+            endpoint                   = runtime.endpoint_manager.get_endpoint(endpoint_id= kwargs.get("endpoint_id",""))
+            kwargs["endpoint_id"]      = endpoint.endpoint_id
+            kwargs["axo_key"]          = kwargs.get("axo_key",self.get_axo_key())
+            kwargs["axo_bucket_id"]    = kwargs.get("axo_bucket_id",self.get_axo_bucket_id())
+            kwargs["sink_bucket_id"]   = kwargs.get("sink_bucket_id",self.get_sink_bucket_id())
+            kwargs["source_bucket_id"] = kwargs.get("source_bucket_id",self.get_source_bucket_id())
+            if not runtime.is_distributed:
+                kwargs["storage"] = runtime.storage_service
+
+            if runtime.is_distributed and self._acx_local:
+                self.persistify()
+            
+
+
+            logger.debug({
+                "event":"TASK.EXECUTION",
+                "remote":self._acx_remote, 
+                "local":self._acx_local, 
+                "fname":f.__name__,
+                "endpoint_id":endpoint.endpoint_id,
+                "axo_key":kwargs.get("axo_key"),
+                "axo_bucket_id":kwargs.get("axo_bucket_id"),
+                "sink_bucket_id":kwargs.get("sink_bucket_id"),
+                "source_bucket_id":kwargs.get("source_bucket_id"),
+            })
+            response = endpoint.task_execution(
+                task_function=f,
+                payload={
+                    "fname":f.__name__,
+                    "axo_key":kwargs.get("axo_key"),
+                    "axo_bucket_id":kwargs.get("axo_bucket_id"),
+                    "sink_bucket_id":kwargs.get("sink_bucket_id"),
+                    "source_bucket_id":kwargs.get("source_bucket_id"),
+                }
+            )
+            print("RESPONSE", response)
+            return Ok(True)
+            
+            # res = endpoint.method_execution(
+            #     key=self.get_axo_key(),
+            #     fname=f.__name__,
+            #     ao=self,
+            #     f= f,
+            #     # f= f_serialized,
+            #     fargs=args,
+            #     fkwargs=kwargs
+            # )
+            # logger.info({
+            #     "event":"METHOD.EXECUTION",
+            #     "remote":self._acx_remote, 
+            #     "local":self._acx_local, 
+            #     "fname":f.__name__,
+            #     "endpoint_id":endpoint.endpoint_id,
+            #     "axo_key":kwargs.get("axo_key"),
+            #     "axo_bucket_id":kwargs.get("axo_bucket_id"),
+            #     "sink_bucket_id":kwargs.get("sink_bucket_id"),
+            #     "source_bucket_id":kwargs.get("source_bucket_id"),
+            #     "response_time":T.time() - start_time
+            # })
+            # return res
+        
+        except Exception as e:
+            logger.error(str(e))
+    __axo.original = f
+    return __axo
+
+
+
 def generate_id(v:str)->str:
     if v == None or v == "":
         return nanoid(alphabet=ALPHABET, size=AXO_ID_SIZE)
@@ -380,7 +456,18 @@ class Axo:
     @staticmethod
     def get_by_key(key:str,bucket_id:str="")->Result[Axo,Exception]:
         return get_runtime().get_active_object(key=key,bucket_id=bucket_id)
-
+    
+    @staticmethod
+    def class_def_persistify(class_def:Any,bucket_id:str="", key:str="")->Result[bool,Exception]:
+        runtime = get_runtime()
+        endpoint = runtime.endpoint_manager.get_endpoint()
+        # print("ENDPOINT",endpoint)
+        result = endpoint.add_class_definition(
+            class_def=class_def,
+            bucket_id=bucket_id,
+            key=key
+        )
+        return result 
  
     def persistify(self,bucket_id:str="",key:str="")->Result[str, Exception]:
         try:

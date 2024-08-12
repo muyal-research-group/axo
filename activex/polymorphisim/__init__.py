@@ -9,20 +9,15 @@ from enum import Enum
 from typing import List
 import json as J
 ALPHABET =  string.ascii_lowercase + string.digits
+from activex.runtime import get_runtime
 
 class PatternX(ABC):
     pass
 
-
-class ActiveObjectTypes(Enum):
-    AXO = "AXO"
-    BUCKET = "BUCKET"
-
-
-
 class SourceX(ABC):
     def __init__(self,id:str):
-        self.id = nanoid(alphabet=ALPHABET) if id =="" else id
+        self.id = id
+        # self.id = nanoid(alphabet=ALPHABET) if id =="" else id
 
     @abstractmethod
     def to_sink(self)->'SinkX':
@@ -35,7 +30,7 @@ class SourceX(ABC):
         return "SourceX(id={})".format(self.id)
 class SinkX(ABC):
     def __init__(self,id:str):
-        self.id = nanoid(alphabet=ALPHABET) if id =="" else id
+        self.id = id
     @abstractmethod
     def to_source(self)->SourceX:
         pass
@@ -48,7 +43,7 @@ class SinkX(ABC):
 
 class BucketSource(SourceX):
     def __init__(self, bucket_id:str=""):
-        super().__init__(id=bucket_id)
+        super().__init__(id=nanoid(alphabet=ALPHABET) if bucket_id =="" else bucket_id)
     def reset(self,id:str = "") -> SourceX:
         return BucketSource(bucket_id=id)
     def to_sink(self) -> SinkX:
@@ -57,7 +52,9 @@ class BucketSource(SourceX):
 
 class BucketSink(SinkX):
     def __init__(self, bucket_id:str=""):
-        super().__init__(id=bucket_id)
+        # super().__init__(id=bucket_id)
+
+        super().__init__(id=nanoid(alphabet=ALPHABET) if bucket_id =="" else bucket_id)
     def reset(self, id: str="") -> SinkX:
         return BucketSink(bucket_id=id)
     def to_source(self) -> SourceX:
@@ -83,21 +80,71 @@ class FilterX(Axo,ABC):
     def __str__(self) -> str:
         return "FilterX(source = {}, sink = {})".format(self.source, self.sink)
 
+class WorkerX(Axo,ABC):
+    @abstractmethod
+    def run(self,*args,**kwargs):
+        pass
+    def __str__(self) -> str:
+        return "WorkerX(source = {}, sink = {})".format(self.source, self.sink)
+
+
+class ManagerWorkerX(PatternX):
+    def __init__(self,
+                 
+                 source_bucket_id:str,
+                 workers:List[WorkerX]=[],
+                 sink_buckets_ids:List[str]=[]
+    ):
+        super().__init__()
+        self.source_bucket_id = source_bucket_id
+        self.workers =workers
+        print(self.workers)
+        self.sink_buckets_ids = sink_buckets_ids
+    
+    def add_worker(self,worker:WorkerX):
+        self.workers.append(worker)
+
+    def run(self):
+        runtime  = get_runtime()
+        # endpoint = runtime.endpoint_manager.get_endpoint()
+        # endpoint.
+        metadatas_result = runtime.storage_service.get_bucket_metadata(bucket_id=self.source_bucket_id)
+        if metadatas_result.is_err:
+            return Err(False)
+        metadatas = metadatas_result.unwrap()
+        num_workers = len(self.workers)
+        for i,metadata in enumerate(metadatas):
+            worker_index = i%num_workers
+            w = self.workers[worker_index]
+            w.source = self.source_bucket_id
+            w.source_keys.append(metadata.key)
+            print("Worker ",worker_index, w.source, w.source_keys)
+            print("*"*50)
+        for i, w in enumerate(self.workers):
+            res = w.run()
+            print(i, res)
+
+
 
 class PipeAndFilter(PatternX):
-    def __init__(self,source:SourceX= BucketSource(), sink:SinkX = BucketSink()):
+    def __init__(self,
+                 source:SourceX= BucketSource(), 
+                 sink:SinkX = BucketSink()
+    ):
         self.source:SourceX = source
         self.sink:SinkX = sink
         self.filters:List[FilterX] = []
 
-    def add_source(self, source:SourceX):
+    def set_source(self, source:SourceX):
         self.source =source
-    def add_sink(self, sink:SinkX):
+
+    def set_sink(self, sink:SinkX):
         self.sink =sink
-    def add_filter(self,filter:FilterX):
+
+    def add_filter(self,filter:FilterX,root_as_source:bool = True):
         filters_len = len(self.filters)
         if  filters_len == 0:
-            filter.source = self.source
+            filter.source = self.source if not root_as_source else filter.source
             filter.set_source_bucket_id(source_bucket_id=filter.source.id)
 
             filter.sink = self.sink
@@ -141,5 +188,6 @@ class PipeAndFilter(PatternX):
         }, indent=4)
         # return s
         
+
 
 

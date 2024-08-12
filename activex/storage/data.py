@@ -5,11 +5,12 @@ from activex import Axo
 from mictlanx.v4.client import Client
 from mictlanx.utils.index import Utils
 from mictlanx.logger.tezcanalyticx.tezcanalyticx import TezcanalyticXHttpHandler,TezcanalyticXParams
+from mictlanx.v4.interfaces import Metadata
 import mictlanx.v4.interfaces as InterfaceX
 from mictlanx.v4.client import Client
 from option import Result,Err,Ok,Some,NONE,Option
 from nanoid import generate as nanoid
-from typing import Dict,Generator,Iterator,Tuple,Any
+from typing import Dict,Generator,Iterator,Tuple,Any,List
 import time as T
 import string
 
@@ -44,6 +45,10 @@ class StorageService(ABC):
     @abstractmethod
     def _get_active_object(self,key:str,bucket_id:str)->Result[Axo, Exception]:
         pass
+
+    @abstractmethod
+    def get_bucket_metadata(self,bucket_id:str)->Result[List[Metadata], Exception]:
+        pass
     
     # @abstractmethod
     # def put_bytes(self,bucket_id:str,key:str,data:bytes,chunk_size:str="1MB")->Result[InterfaceX.PutChunkedResponse,Exception]:
@@ -74,22 +79,8 @@ class LocalStorageService(StorageService):
     def __init__(self, storage_service_id: str):
         super().__init__(storage_service_id)
     
-    # def put_bytes(self, bucket_id: str = "", key: str = "") -> Result[InterfaceX.PutChunkedResponse, Exception]:
-    #     return self.put(bucket_id=bucket_id, key=key, obj={})
-    
-    # def get_bytes(self,key: str, bucket_id: str = "") -> Result[bytes, Exception]:
-    #     base_path = os.environ.get("ACTIVE_LOCAL_PATH","/activex/data")
-    #     combined_key = "{}@{}".format(bucket_id,key)
-    #     path = "{}/{}".format(base_path,combined_key)
-    #     with open(path,"rb") as f:
-    #         return Ok(f.read())
-        
-    # def get_streaming(self, key: str, bucket_id: str = "",chunk_size:str="1MB") -> Result[Iterator[bytes], Exception]:
-    #     try:
-    #         return Ok(Utils.to_gen_bytes(data=self.get_bytes(bucket_id=bucket_id,key=key), chunk_size=chunk_size))
-    #     except Exception as e:
-    #         return Err(e)
-    
+    def get_bucket_metadata(self, bucket_id: str) -> Result[List[Metadata], Exception]:
+        return Err(Exception("get_bucket_metadata not implemented yet."))
     def get_streaming(self, bucket_id: str, key: str, chunk_size: str = "1MB") -> Result[Tuple[Iterator[bytes],Dict[str, Any]], Exception]:
         try:
             key               = nanoid(alphabet=string.digits+string.ascii_lowercase) if not key else key
@@ -218,6 +209,31 @@ class MictlanXStorageService(StorageService):
     #         return self.client.
     #     except Exception as e:
     #         return Err(e)
+    def get_bucket_metadata(self, bucket_id: str) -> Result[List[Metadata], Exception]:
+        try:
+            # self.client.getbuck
+            # print("MICTLANX_CLIENT",self.client)
+            bucket_metadata_result = self.client.get_all_bucket_metadata(bucket_id=bucket_id) 
+            # if bucket_metadata_result.is_ok:
+            for bucket_metadata in bucket_metadata_result:
+            # bucket_metadata = bucket_metadata_result.unwrap()
+                balls = []
+                metadatas = []
+                for metadata in bucket_metadata.balls:
+                    if metadata.key in balls:
+                        continue
+                    else:
+                        balls.append(metadata.key)
+                        metadatas.append(metadata)
+                return Ok(metadatas)
+                        # yield metadata
+            # else:
+            #     return bucket_metadata_result
+            # for router_metadata in bucket_metadata:
+                
+
+        except Exception as e:
+            return Err(e)
     def from_client(client:Client)->'MictlanXStorageService':
         return MictlanXStorageService(
             client= Some(client)
