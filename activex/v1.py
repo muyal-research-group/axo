@@ -116,7 +116,12 @@ def axo_task(f):
             start_time                 = T.time()
             runtime                    = get_runtime()
             self.set_endpoint_id(endpoint_id=runtime.endpoint_manager.get_endpoint().endpoint_id)
+
             endpoint                   = runtime.endpoint_manager.get_endpoint(endpoint_id= kwargs.get("endpoint_id",""))
+            logger.debug({
+                "evevent":"GET.ENDPOINT",
+                "endpoint_id":endpoint.endpoint_id
+            })
             kwargs["endpoint_id"]      = endpoint.endpoint_id
             kwargs["axo_key"]          = kwargs.get("axo_key",self.get_axo_key())
             kwargs["axo_bucket_id"]    = kwargs.get("axo_bucket_id",self.get_axo_bucket_id())
@@ -126,7 +131,11 @@ def axo_task(f):
                 kwargs["storage"] = runtime.storage_service
 
             if runtime.is_distributed and self._acx_local:
-                self.persistify()
+                res = self.persistify()
+                if res.is_err:
+                    raise res.unwrap_err()
+                # print("PERSISTIFY==========================", res)
+            # raise Exception("BOOOOM!")
             
 
 

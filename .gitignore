@@ -9,3 +9,4 @@ dist/*
 **/*.npy
 **/publish.sh
 tests/out
+**/*.rar

@@ -92,37 +92,60 @@ class ManagerWorkerX(PatternX):
     def __init__(self,
                  
                  source_bucket_id:str,
-                 workers:List[WorkerX]=[],
-                 sink_buckets_ids:List[str]=[]
+                 worker_class:WorkerX,
+                 sink_buckets_ids:List[str]=[],
+                 _local:bool = True,
+                 dependencies:List[str]=[],
+                 **kwargs
     ):
         super().__init__()
         self.source_bucket_id = source_bucket_id
-        self.workers =workers
-        print(self.workers)
+        self.worker_class     = worker_class
+        self.dependencies     = dependencies
         self.sink_buckets_ids = sink_buckets_ids
+        self.__local:bool     = _local
+        self.kwargs = kwargs
+        print("KWARGS", self.kwargs)
+        # print(self.worker_class)
     
-    def add_worker(self,worker:WorkerX):
-        self.workers.append(worker)
+    # def add_worker(self,worker:WorkerX):
+    #     self.workers.append(worker)
 
     def run(self):
         runtime  = get_runtime()
-        # endpoint = runtime.endpoint_manager.get_endpoint()
+        endpoint = runtime.endpoint_manager.get_endpoint()
         # endpoint.
         metadatas_result = runtime.storage_service.get_bucket_metadata(bucket_id=self.source_bucket_id)
         if metadatas_result.is_err:
             return Err(False)
         metadatas = metadatas_result.unwrap()
-        num_workers = len(self.workers)
+        n_workers = len(metadatas)
+        res = endpoint.elasticity(rf=n_workers)
+        for endpoint in res:
+            endpoint_id  = endpoint.get("endpoint_id","")
+            req_res_port = int(endpoint.get("req_res_port",0))
+            pub_sub_port = int(endpoint.get("pub_sub_port",0))
+            if  endpoint_id =="" or req_res_port <=0  or pub_sub_port <= 0:
+                continue
+            runtime.endpoint_manager.add_endpoint(
+                endpoint_id=endpoint_id,
+                protocol="tcp",
+                hostname="localhost" if self.__local else endpoint_id,
+                pubsub_port=pub_sub_port,
+                req_res_port=req_res_port
+            )
+        # num_workers = len(self.workers)
         for i,metadata in enumerate(metadatas):
-            worker_index = i%num_workers
-            w = self.workers[worker_index]
+            # worker_index = i%num_workers
+            w:Axo = self.worker_class()
+            w.set_dependencies(dependencies=self.dependencies)
             w.source = self.source_bucket_id
             w.source_keys.append(metadata.key)
-            print("Worker ",worker_index, w.source, w.source_keys)
-            print("*"*50)
-        for i, w in enumerate(self.workers):
-            res = w.run()
-            print(i, res)
+            print("Worker ",i, w.source, w.source_keys)
+            res= w.run(**self.kwargs)
+            # print(i, res)
+        # for i, w in enumerate(self.workers):
+            # res = w.run()
 
 
 

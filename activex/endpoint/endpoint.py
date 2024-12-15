@@ -72,6 +72,9 @@ class EndpointX(ABC):
     @abstractmethod
     def task_execution(self,task_function:GenericFunction,payload:Dict[str,Any]={}):
         return Err(Exception("No implemented yet."))
+    @abstractmethod
+    def elasticity(self,rf:int):
+        return Err(Exception("No implemented yet."))
 
         
 
@@ -111,6 +114,8 @@ class LocalEndpoint(EndpointX):
     def task_execution(self,task_function:GenericFunction, payload: Dict[str, Any] = {})->Result[Any, Exception]:
         return super().task_execution(payload=payload,task_function=task_function)
         # return Err(Exception("No implemented yet."))
+    def elasticity(self, rf: int):
+        return super().elasticity(rf)
     
 class DistributedEndpoint(EndpointX):
     def __init__(self, 
@@ -309,6 +314,24 @@ class DistributedEndpoint(EndpointX):
         except Exception as e:
             return Err(e)
         # return super().task_execution(payload)
+    def elasticity(self, rf: int):
+        try:
+            payload =  {"rf":rf}
+            payload_bytes = J.dumps(payload).encode(self.encoding)
+            self.reqres_socket.send_multipart([b"activex",b"ELASTICITY",payload_bytes])
+            response_multipart = self.reqres_socket.recv_multipart()
+            topic_bytes,operation_bytes,status_bytes,metadata_bytes, result_bytes  = response_multipart
+            topic           = topic_bytes.decode()
+            operation       = operation_bytes.decode()
+            status          = int.from_bytes(bytes=status_bytes, byteorder="little",signed=True )
+            if status <0:
+                return Err(Exception("elasticity error - {} - ".format(operation)))
+            result = CP.loads(result_bytes)
+            return result
+            # print("ELASTICITY", result)
+        except Exception as e:
+            return Err(e)
+        # return super().elasticity(rf)
     def to_string(self):
         return "{}:{}:{}:{}:{}".format(self.endpoint_id,self.protocol,self.hostname,self.req_res_port,self.pubsub_port)
     @staticmethod
@@ -338,7 +361,13 @@ class XoloEndpointManager(ABC):
         self.counter+=1
         return self.endpoints.get(endpoint_id)
     def add_endpoint(self,endpoint_id:str,hostname:str, pubsub_port:int, req_res_port:int,protocol:str="tcp"):
-        x                           = DistributedEndpoint(protocol=protocol,hostname=hostname,endpoint_id=endpoint_id, req_res_port=req_res_port,pubsub_port=pubsub_port)
+        x                           = DistributedEndpoint(
+            protocol=protocol,
+            hostname=hostname,
+            endpoint_id=endpoint_id,
+            req_res_port=req_res_port,
+            pubsub_port=pubsub_port
+        )
         if not self.endpoint_id== endpoint_id:
             status = x.start()
             if status == -1:
