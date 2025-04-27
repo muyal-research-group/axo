@@ -11,11 +11,11 @@ from mictlanx.v4.client import Client as MictlanXClient
 from mictlanx.utils.index import Utils as UtilsX
 from xolo.utils.utils import Utils as XoloUtils
 # 
-from activex import Axo,axo_method,axo_task
-from activex.contextmanager import ActiveXContextManager
-from activex.endpoint import XoloEndpointManager
-from activex.storage import StorageService
-from activex.polymorphisim import FilterXOut, PipeAndFilter,FilterX,SourceX,SinkX,BucketSource,BucketSink,ManagerWorkerX,WorkerX
+from axo import Axo,axo_method,axo_task
+from axo.contextmanager import ActiveXContextManager
+from axo.endpoint import EndpointManagerX
+from axo.storage import StorageService
+from axo.polymorphisim import FilterXOut, PipeAndFilter,FilterX,SourceX,SinkX,BucketSource,BucketSink,ManagerWorkerX,WorkerX
 import pandas as pd
 
 
@@ -24,7 +24,7 @@ AXO_ENDPOINT_PROTOCOL      = os.environ.get("AXO_ENDPOINT_PROTOCOL","tcp")
 AXO_ENDPOINT_HOSTNAME      = os.environ.get("AXO_ENDPOINT_HOSTNAME","localhost")
 AXO_ENDPOINT_PUBSUB_PORT   = int(os.environ.get("AXO_ENDPOINT_PUBSUB_PORT","16000"))
 AXO_ENDPOINT_REQ_RES_PORT  = int(os.environ.get("AXO_ENDPOINT_REQ_RES_PORT","16667"))
-endpoint_manager = XoloEndpointManager(
+endpoint_manager = EndpointManagerX(
     endpoint_id="mw_example",
     endpoints={}
 )

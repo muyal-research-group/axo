@@ -1,15 +1,15 @@
-from activex.polymorphisim import FilterX, PipeAndFilter, BucketSink,BucketSource,FilterXOut
+from axo.polymorphisim import FilterX, PipeAndFilter, BucketSink,BucketSource,FilterXOut
 import time as T
-from activex import Axo,axo_method
+from axo import Axo,axo_method
 from typing import Generator,Any,List,Dict
-from activex.contextmanager import ActiveXContextManager
+from axo.contextmanager import ActiveXContextManager
 import humanfriendly as  HF
-from activex.endpoint import XoloEndpointManager
-from activex.storage import StorageService
+from axo.endpoint import EndpointManagerX
+from axo.storage import StorageService
 import cloudpickle as CP
 from mictlanx.v4.client import Client as MictlanXClient
 from mictlanx.utils.index import Utils as UtilsX
-from activex.polymorphisim import FilterXOut, PipeAndFilter,FilterX
+from axo.polymorphisim import FilterXOut, PipeAndFilter,FilterX
 import os 
 
 
@@ -24,7 +24,7 @@ MICTLANX_DEBUG             = bool(int(os.environ.get("MICTLANX_DEBUG","1")))
 MICTLANX_MAX_WORKERS       = int(os.environ.get("MICTLANX_MAX_WORKERS","2"))
 MICTLANX_LOG_PATH          = os.environ.get("MICTLANX_LOG_PATH","./log")
 SOURCE_PATH                = os.environ.get("SOURCE_PATH","./source")
-endpoint_manager = XoloEndpointManager(
+endpoint_manager = EndpointManagerX(
     endpoint_id=AXO_ENDPOINT_ID,
     endpoints={}
 )

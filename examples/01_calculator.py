@@ -1,10 +1,10 @@
-from activex.contextmanager import ActiveXContextManager
+from axo.contextmanager import ActiveXContextManager
 import logging
 import os
 import more_itertools as mit
 import sys
-from activex.contextmanager.contextmanager import ActiveXContextManager
-from activex.endpoint import XoloEndpointManager
+from axo.contextmanager.contextmanager import ActiveXContextManager
+from axo.endpoint import EndpointManagerX
 # from common import Calculator
 # from activex.runtime.local import LocalRuntime
 
@@ -23,7 +23,7 @@ logger.setLevel(logging.DEBUG)
 
 args = sys.argv[1:]
 
-endpoint_manager = XoloEndpointManager()
+endpoint_manager = EndpointManagerX()
 endpoint_manager.add_endpoint(
     endpoint_id=AXO_ENDPOINT_ID,
     protocol=AXO_ENDPOINT_PROTOCOL,

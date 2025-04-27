@@ -1,9 +1,9 @@
 import time as T
-from activex import Axo,axo_method
+from axo import Axo,axo_method
 from typing import Generator,Any,List
-from activex.contextmanager import ActiveXContextManager
+from axo.contextmanager import ActiveXContextManager
 import humanfriendly as  HF
-from activex.endpoint import XoloEndpointManager
+from axo.endpoint import EndpointManagerX
 import cloudpickle as CP
 from mictlanx.v4.client import Client
 from mictlanx.utils.index import Utils as UtilsX
@@ -123,7 +123,7 @@ def fx(index:int,data:bytes):
 
 
 def main():
-    endpoint_manager = XoloEndpointManager(
+    endpoint_manager = EndpointManagerX(
         endpoint_id=AXO_ENDPOINT_ID,
         endpoints={}
     )
