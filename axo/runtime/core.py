@@ -23,11 +23,12 @@ from queue import Queue
 from threading import Thread
 from typing import Optional
 from weakref import WeakKeyDictionary
+import time as T
 
 # ─────────────────────────────────────────────────────────────── 3rd‑party ──
 import cloudpickle as cp
 from nanoid import generate as nanoid
-from option import Err, Result
+from option import Err, Result,Ok
 
 # ──────────────────────────────────────────────────────────────── project ───
 from axo.import_manager import DefaultImportManager
@@ -81,7 +82,7 @@ class ActiveXRuntime(ABC, Thread):
         runtime_id: str = "",
         is_distributed: bool = False,
     ) -> None:
-        super().__init__(name="axo-runtime", daemon=True)
+        super().__init__(name=runtime_id, daemon=True)
 
         # identifiers & flags -------------------------------------------
         self.runtime_id = (
@@ -109,10 +110,10 @@ class ActiveXRuntime(ABC, Thread):
     # ------------------------------------------------------------------ #
     # Persist & fetch helpers
     # ------------------------------------------------------------------ #
-    def get_active_object(self, *, bucket_id: str, key: str) -> Result[Axo, Exception]:
-        return self.storage_service._get_active_object(bucket_id=bucket_id, key=key)
+    async def get_active_object(self, *, bucket_id: str, key: str) -> Result[Axo, Exception]:
+        return await self.storage_service._get_active_object(bucket_id=bucket_id, key=key)
 
-    def persistify(
+    async def persistify(
         self, instance: Axo, *, bucket_id: str = "axo", key: Optional[str] = None
     ) -> Result[str, Exception]:
         """
@@ -120,35 +121,83 @@ class ActiveXRuntime(ABC, Thread):
         (2) its state bytes.  Uses whatever endpoint manager was injected.
         """
         try:
-            key = key or instance.get_axo_key()
-            endpoint = self.endpoint_manager.get_endpoint(instance.get_endpoint_id())
-
-            # 1) metadata via endpoint
-            meta_res = endpoint.put(key=key, metadata=instance._acx_metadata)
+            t1 = T.time()
+            key      = key or instance.get_axo_key()
+            endpoint:EndpointX = self.endpoint_manager.get_endpoint(instance.get_endpoint_id())
+            meta_res:Result[str, Exception] = endpoint.put(key=key, metadata=instance._acx_metadata)
             if meta_res.is_err:
+                logger.error({
+                    "error":str(meta_res.unwrap_err())
+                })
                 return Err(meta_res.unwrap_err())
-
+            logger.info({
+                "event":"ENDPOINT.PUT",
+                "response_time":T.time() - t1
+            })
             # 2) class definition
-            cls_key_res = self.storage_service.put(
+            attrs,methods, class_def, class_code = instance.get_raw_parts()
+
+            attrs_put_result = await self.storage_service.put(
                 bucket_id=bucket_id,
-                key=f"{key}_class_def",
-                tags={
-                    "module": instance._acx_metadata.module,
-                    "class_name": instance._acx_metadata.class_name,
-                },
-                data=cp.dumps(instance.__class__),
+                key = f"{key}_attrs",
+                tags = {
+                    "module": instance._acx_metadata.axo_module,
+                    "class_name": instance._acx_metadata.axo_class_name,
+                }, 
+                data =cp.dumps(attrs)
             )
-            if cls_key_res.is_err:
-                return Err(cls_key_res.unwrap_err())
-            class_def_key = cls_key_res.unwrap()
+            if attrs_put_result.is_err:
+                return Err(attrs_put_result.unwrap_err())
+
+            # class_put_result = await self.storage_service.put(
+            #     bucket_id=bucket_id,
+            #     key=f"{key}_class_def",
+            #     tags={
+            #         "module": instance._acx_metadata.module,
+            #         "class_name": instance._acx_metadata.class_name,
+            #     },
+            #     data=cp.dumps(class_def)
+            # )
+            # if class_put_result.is_err:
+            #     return Err(class_put_result.unwrap_err())
+            # methods_put_result = await self.storage_service.put(
+            #     bucket_id=bucket_id,
+            #     key = f"{key}_methods",
+            #     tags = {
+            #         "module": instance._acx_metadata.module,
+            #         "class_name": instance._acx_metadata.class_name,
+            #     }, 
+            #     data = cp.dumps(methods)
+            # )
+            # if methods_put_result.is_err:
+            #     return Err(methods_put_result.unwrap_err())
+            tags = instance._acx_metadata.to_json_with_string_values()
+            class_code_put_result = await self.storage_service.put(
+                bucket_id=bucket_id,
+                key = f"{key}_source_code",
+                tags = {
+                    **tags
+                    # "module": instance._acx_metadata.module,
+                    # "class_name": instance._acx_metadata.class_name,
+                }, 
+                data = cp.dumps(class_code.encode("utf-8"))
+            )
+            if class_code_put_result.is_err:
+                return Err(class_code_put_result.unwrap_err())
+
+
+
+            # class_def_key = class_put_result.unwrap()
 
             # 3) object bytes
-            tags = instance._acx_metadata.to_json_with_string_values()
-            tags["class_def_key"] = class_def_key
-            obj_res = self.storage_service.put(
-                bucket_id=bucket_id, key=key, data=instance.to_bytes(), tags=tags
-            )
-            return obj_res
+            # tags["class_def_key"] = class_def_key
+            return Ok(key)
+            # object_put_result = await self.storage_service.put(
+            #     bucket_id=bucket_id, key=key, data=instance.to_bytes(), tags=tags
+            # )
+            # print("CLASS_DEF_KEY_RESULT",object_put_result)
+            
+            # return object_put_result
         except Exception as exc:  # pragma: no cover
             logger.exception("persistify failed")
             return Err(exc)

@@ -2,7 +2,7 @@ from axo.runtime import set_runtime,get_runtime
 from axo.runtime.local import LocalRuntime
 from axo.runtime.distributed import DistributedRuntime
 from axo.runtime.core import ActiveXRuntime
-from axo.endpoint import EndpointManagerX
+from axo.endpoint.manager import DistributedEndpointManager
 from mictlanx.logger.tezcanalyticx.tezcanalyticx import TezcanalyticXParams
 from option import Option,NONE
 from typing import Optional
@@ -31,14 +31,13 @@ class ActiveXContextManager:
         
     @staticmethod
     def distributed(
-        endpoint_manager:EndpointManagerX,
-        tezcanalyticx_params:Option[TezcanalyticXParams] = NONE
+        endpoint_manager:DistributedEndpointManager,
     )->'ActiveXContextManager':
+        runtime_id = "distributed-{}".format(nanoid(alphabet=string.ascii_lowercase+string.digits))
         return ActiveXContextManager(
             runtime= DistributedRuntime(
-                runtime_id="distributed-{}".format(nanoid(alphabet=string.ascii_lowercase+string.digits)),
+                runtime_id=runtime_id,
                 endpoint_manager=endpoint_manager,
-                tezcanalyticx_params=tezcanalyticx_params
             )
         )
         

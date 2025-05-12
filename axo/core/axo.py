@@ -23,13 +23,13 @@ from __future__ import annotations
 # ────────────────────────────────────────────────────────────────── stdlib ──
 import inspect
 import logging
+import sys
 import os
 import re
 import struct
 import string
 import time as _t
 import types
-from abc import ABC
 from functools import wraps
 from typing import (
     Any,
@@ -126,29 +126,33 @@ def axo_method(func: Callable[..., R]) -> Callable[..., Result[R, Exception]]:
         try:
             start = _t.time()
             rt = get_runtime()  # current LocalRuntime or DistributedRuntime
-            ep = rt.endpoint_manager.get_endpoint(kwargs.get("endpoint_id", ""))
+            ep = rt.endpoint_manager.get_endpoint(kwargs.get("axo_endpoint_id", "") )
             self.set_endpoint_id(ep.endpoint_id)
 
             # Inject default kwargs if missing
-            kwargs.setdefault("endpoint_id", ep.endpoint_id)
+            kwargs.setdefault("axo_endpoint_id", ep.endpoint_id)
             kwargs.setdefault("axo_key", self.get_axo_key())
             kwargs.setdefault("axo_bucket_id", self.get_axo_bucket_id())
-            kwargs.setdefault("sink_bucket_id", self.get_sink_bucket_id())
-            kwargs.setdefault("source_bucket_id", self.get_source_bucket_id())
+            kwargs.setdefault("axo_sink_bucket_id", self.get_sink_bucket_id())
+            kwargs.setdefault("axo_source_bucket_id", self.get_source_bucket_id())
+            print(self.__dict__)
             if not rt.is_distributed:
                 kwargs.setdefault("storage", rt.storage_service)
 
             # Persist local instance if we are about to call a remote endpoint
-            if rt.is_distributed and self._acx_local:
-                self.persistify()
+            # print(self._acx_local, rt.is_distributed)
+            # if rt.is_distributed and self._acx_local:
+                return Err(Exception("First you must persistify the object."))
+                # self.persistify()
 
             logger.debug(
                 {
                     "event": "METHOD.EXEC",
                     "fname": func.__name__,
-                    **{k: kwargs[k] for k in ("axo_key", "endpoint_id")},
+                    **{k: kwargs[k] for k in ("axo_key", "axo_endpoint_id")},
                 }
             )
+            print("ARGS",args)
             res = ep.method_execution(
                 key=self.get_axo_key(),
                 fname=func.__name__,
@@ -219,21 +223,21 @@ class MetadataX(BaseModel):
     sink_path: ClassVar[str] = os.getenv("AXO_SINK_PATH", "/axo/sink")
 
     # Stored fields
-    pivot_storage_node: Optional[str] = ""
-    is_read_only: bool = False
+    axo_pivot_storage_node: Optional[str] = ""
+    axo_is_read_only: bool = False
 
     axo_key: AxoObjectId = ""
-    module: str
-    name: str
-    class_name: str
-    version: str = "v0"
+    axo_module: str
+    axo_name: str
+    axo_class_name: str
+    axo_version: str = "v0"
 
     axo_bucket_id: str = ""
-    source_bucket_id: str = ""
-    sink_bucket_id: str = ""
+    axo_source_bucket_id: str = ""
+    axo_sink_bucket_id: str = ""
 
-    endpoint_id: str = ""
-    dependencies: List[str] = Field(default_factory=list)
+    axo_endpoint_id: str = ""
+    axo_dependencies: List[str] = Field(default_factory=list)
 
     # ------------------------------------------------------------------ #
     # pydantic hook
@@ -243,9 +247,9 @@ class MetadataX(BaseModel):
         # Fill IDs if empty
         self.axo_key = _generate_id(self.axo_key)
         self.axo_bucket_id = _generate_id(self.axo_bucket_id, size=AXO_ID_SIZE * 2)
-        self.sink_bucket_id = _generate_id(self.sink_bucket_id, size=AXO_ID_SIZE * 2)
-        self.source_bucket_id = _generate_id(
-            self.source_bucket_id, size=AXO_ID_SIZE * 2
+        self.axo_sink_bucket_id = _generate_id(self.axo_sink_bucket_id, size=AXO_ID_SIZE * 2)
+        self.axo_source_bucket_id = _generate_id(
+            self.axo_source_bucket_id, size=AXO_ID_SIZE * 2
         )
 
     # ------------------------------------------------------------------ #
@@ -314,34 +318,34 @@ class Axo(metaclass=AxoMeta):
 
     # -- sink -----------------------------------------------------------
     def set_sink_bucket_id(self, sink_bucket_id: str = "") -> str:
-        self._acx_metadata.sink_bucket_id = _generate_id(
+        self._acx_metadata.axo_sink_bucket_id = _generate_id(
             sink_bucket_id, size=AXO_ID_SIZE * 2
         )
-        return self._acx_metadata.sink_bucket_id
+        return self._acx_metadata.axo_sink_bucket_id
 
     def get_sink_bucket_id(self) -> str:
-        return self._acx_metadata.sink_bucket_id or self.set_sink_bucket_id()
+        return self._acx_metadata.axo_sink_bucket_id or self.set_sink_bucket_id()
 
     # -- source ---------------------------------------------------------
     def set_source_bucket_id(self, source_bucket_id: str = "") -> str:
-        self._acx_metadata.source_bucket_id = _generate_id(
+        self._acx_metadata.axo_source_bucket_id = _generate_id(
             source_bucket_id, size=AXO_ID_SIZE * 2
         )
-        return self._acx_metadata.source_bucket_id
+        return self._acx_metadata.axo_source_bucket_id
 
     def get_source_bucket_id(self) -> str:
-        return self._acx_metadata.source_bucket_id or self.set_source_bucket_id()
+        return self._acx_metadata.axo_source_bucket_id or self.set_source_bucket_id()
 
     # -- endpoint -------------------------------------------------------
     def set_endpoint_id(self, endpoint_id: str = "") -> str:
         eid = (
             f"axo-endpoint-{_generate_id('', size=8)}" if not endpoint_id else endpoint_id
         )
-        self._acx_metadata.endpoint_id = eid
+        self._acx_metadata.axo_endpoint_id = eid
         return eid
 
     def get_endpoint_id(self) -> str:
-        return self._acx_metadata.endpoint_id or self.set_endpoint_id()
+        return self._acx_metadata.axo_endpoint_id or self.set_endpoint_id()
 
     # ------------------------------------------------------------------ #
     # Construction magic
@@ -350,13 +354,13 @@ class Axo(metaclass=AxoMeta):
         # print(kwargs)
         obj = super().__new__(cls)
         obj._acx_metadata = MetadataX(
-            class_name=cls.__name__, module=cls.__module__, name=cls.__name__
+            axo_class_name=cls.__name__, axo_module=cls.__module__, axo_name=cls.__name__
         )
         obj._acx_metadata.axo_bucket_id = kwargs.get("axo_bucket_id",obj._acx_metadata.axo_bucket_id)
-        obj._acx_metadata.source_bucket_id = kwargs.get("source_bucket_id",obj._acx_metadata.source_bucket_id)
-        obj._acx_metadata.sink_bucket_id = kwargs.get("sink_bucket_id",obj._acx_metadata.sink_bucket_id)
+        obj._acx_metadata.axo_source_bucket_id = kwargs.get("axo_source_bucket_id",obj._acx_metadata.axo_source_bucket_id)
+        obj._acx_metadata.axo_sink_bucket_id = kwargs.get("axo_sink_bucket_id",obj._acx_metadata.axo_sink_bucket_id)
         obj._acx_metadata.axo_key = kwargs.get("axo_key",obj._acx_metadata.axo_key)
-        obj._acx_metadata.endpoint_id = kwargs.get("endpoint_id",obj._acx_metadata.endpoint_id)
+        obj._acx_metadata.axo_endpoint_id = kwargs.get("axo_endpoint_id",obj._acx_metadata.axo_endpoint_id)
         return obj
     
     def __init__(self,*args,**kwargs):
@@ -372,26 +376,143 @@ class Axo(metaclass=AxoMeta):
 
             [len][attrs]  [len][methods]  [len][class_def]  [len][src]
         """
-        attrs_b = cp.dumps(self.__dict__)
-        methods_b = cp.dumps(
-            {
-                n: getattr(self.__class__, n) 
-                for n in dir(self.__class__) 
-                if callable(getattr(self.__class__, n))
-            }
-        )
-        class_def_b = cp.dumps(self.__class__)
-        src_b = cp.dumps(inspect.getsource(self.__class__).encode())
+        attrs = cp.dumps(self.__dict__)
+        methods = cp.dumps({
+            k: getattr(self, k) for k in dir(self)
+            if callable(getattr(self, k)) and not k.startswith("__")
+        })
+        class_def = cp.dumps(self.__class__)
+        class_code = inspect.getsource(self.__class__).encode("utf-8")  # ✅ ENCODED
 
-        out = b""
-        for part in (attrs_b, methods_b, class_def_b, src_b):
-            out += struct.pack("I", len(part)) + part
-        return out
+        parts = [attrs, methods, class_def, class_code]
+        packed = b""
+        for part in parts:
+            packed += struct.pack("I", len(part)) + part
+        return packed
+    
+    def  get_raw_parts(self)->Tuple[Dict[str, Any], Dict[str, Any], Type[Axo], str]:
+        attrs = self.__dict__
+        print(attrs)
+        methods = {
+            k: getattr(self, k) for k in dir(self)
+            if callable(getattr(self, k)) and not k.startswith("__")
+        }
+        class_def = self.__class__
+        class_code = inspect.getsource(self.__class__)
+        # .encode("utf-8")  # ✅ ENCODED
+
+        return attrs, methods, class_def, class_code
+        # attrs_b = cp.dumps(self.__dict__)
+        # methods_b = cp.dumps(
+        #     {
+        #         n: getattr(self.__class__, n) 
+        #         for n in dir(self.__class__) 
+        #         if callable(getattr(self.__class__, n))
+        #     }
+        # )
+        # class_def_b = cp.dumps(self.__class__)
+        # src_b = cp.dumps(inspect.getsource(self.__class__).encode())
+
+        # out = b""
+        # for part in (attrs_b, methods_b, class_def_b, src_b):
+        #     out += struct.pack("I", len(part)) + part
+        # return out
 
     def to_stream(self,chunk_size: str = "1MB") -> Generator[bytes, None, None]:
         """Yield ``self`` as (roughly) *chunk_size* byte blocks."""
         return serialize_and_yield_chunks(self, chunk_size=chunk_size)
 
+    # @staticmethod
+    # def get_parts(raw_obj: bytes) -> Result[Tuple[Dict[str, Any], Dict[str, Any], Type[Axo], str], Exception]:
+    #     try:
+    #         index = 0
+    #         unpacked_data = []
+
+    #         # First, read lengths and raw segments
+    #         raw_parts = []
+    #         while index < len(raw_obj):
+    #             length = struct.unpack_from('I', raw_obj, index)[0]
+    #             index += 4
+    #             data = raw_obj[index:index+length]
+    #             index += length
+    #             raw_parts.append(data)
+
+    #         # The last part is the source code of the class (in bytes)
+    #         class_code_bytes = raw_parts[-1]
+    #         code_str = class_code_bytes.decode("utf-8")
+
+    #         # Dynamically evaluate the class code into a temporary module
+    #         module_name = "__axo_dynamic__"
+    #         mod = types.ModuleType(module_name)
+    #         sys.modules[module_name] = mod
+    #         exec(code_str, mod.__dict__)
+
+    #         # Find the class that inherits from Axo
+    #         rebuilt_class = None
+    #         for obj in mod.__dict__.values():
+    #             if isinstance(obj, type) and issubclass(obj, Axo) and obj.__name__ != "Axo":
+    #                 rebuilt_class = obj
+    #                 break
+    #         if rebuilt_class is None:
+    #             raise Exception("No valid Axo class could be rebuilt")
+
+    #         # Now safely deserialize the rest
+    #         attrs = cp.loads(raw_parts[0])
+    #         methods = cp.loads(raw_parts[1])
+    #         class_df = rebuilt_class  # You can also `cp.loads(raw_parts[2])` if needed
+
+    #         return Ok((attrs, methods, class_df, code_str))
+
+    #     except Exception as e:
+    #         return Err(e)
+        
+    @staticmethod
+    def get_parts(raw_obj: bytes) -> Result[Tuple[Dict[str, Any], Dict[str, Any], Type[Axo], str], Exception]:
+        try:
+            index = 0
+            unpacked_data = []
+
+            # First, read lengths and raw segments
+            raw_parts = []
+            while index < len(raw_obj):
+                length = struct.unpack_from('I', raw_obj, index)[0]
+                index += 4
+                data = raw_obj[index:index+length]
+                index += length
+                raw_parts.append(data)
+
+            # The last part is the source code of the class (in bytes)
+            class_code_bytes = raw_parts[-1]
+            code_str = class_code_bytes.decode("utf-8")
+
+            # Dynamically evaluate the class code into a temporary module
+            module_name = "axo.dynamic"
+            mod = types.ModuleType(module_name)
+            mod.__dict__["Axo"] = Axo
+            mod.__dict__["axo_method"] = axo_method
+            sys.modules[module_name] = mod
+
+            exec(code_str, mod.__dict__)
+
+            # Find the class that inherits from Axo
+            rebuilt_class = None
+            for obj in mod.__dict__.values():
+                if isinstance(obj, type) and issubclass(obj, Axo) and obj.__name__ != "Axo":
+                    rebuilt_class = obj
+                    break
+            if rebuilt_class is None:
+                raise Exception("No valid Axo class could be rebuilt")
+            rebuilt_class.__module__ = module_name
+            
+            # Now safely deserialize the rest
+            attrs = cp.loads(raw_parts[0])
+            methods = cp.loads(raw_parts[1])
+            class_df = rebuilt_class  # You can also `cp.loads(raw_parts[2])` if needed
+
+            return Ok((attrs, methods, class_df, code_str))
+
+        except Exception as e:
+            return Err(e)
     # -- Deserialisation -----------------------------------------------
     @staticmethod
     def from_bytes(raw: bytes, include_original: bool = False) -> Result["Axo", Exception]:
@@ -402,35 +523,85 @@ class Axo(metaclass=AxoMeta):
         :func:`axo_method` / :func:`axo_task` the undecorated function is bound.
         """
         try:
-            parts: list[Any] = []
+            parts = []
             idx = 0
             while idx < len(raw):
                 length = struct.unpack_from("I", raw, idx)[0]
                 idx += 4
-                parts.append(cp.loads(raw[idx : idx + length]))
+                parts.append(raw[idx:idx+length])
                 idx += length
 
-            attrs, methods, class_def = parts[:3]
-            obj:Axo = class_def.__new__(class_def)
-            # Restore state & methods
-            skip ={"__class__", "__dict__", "__module__", "__weakref__"} 
+            attrs = cp.loads(parts[0])
+            methods = cp.loads(parts[1])
+            class_code_str = parts[3].decode("utf-8")
+
+            # Dynamically execute the class definition
+
+            module_name = "__axo_dynamic__"
+            mod = types.ModuleType(module_name)
+
+            # ✅ Inject 'Axo' base class into the module's namespace
+            mod.__dict__["Axo"] = Axo
+            mod.__dict__["axo_method"] = axo_method
+            sys.modules[module_name] = mod
+
+            # Now execute the class code with the proper Axo definition
+            exec(class_code_str, mod.__dict__)
+
+            # Find the subclass of Axo
+            rebuilt_class = None
+            for obj in mod.__dict__.values():
+                if isinstance(obj, type) and issubclass(obj, Axo) and obj.__name__ != "Axo":
+                    rebuilt_class = obj
+                    break
+
+            if rebuilt_class is None:
+                return Err(Exception("No valid Axo subclass found in class definition"))
+
+            obj: Axo = rebuilt_class.__new__(rebuilt_class)
+            skip = {"__class__", "__dict__", "__module__", "__weakref__"}
             for k, v in attrs.items():
                 if k not in skip:
                     setattr(obj, k, v)
             for name, fn in methods.items():
-                if name in skip:
-                    continue  
-                fn = fn.original if include_original and hasattr(fn, "original") else fn
-                setattr(obj, name, types.MethodType(fn, obj))
+                if name not in skip:
+                    fn = fn.original if include_original and hasattr(fn, "original") else fn
+                    setattr(obj, name, types.MethodType(fn, obj))
 
             return Ok(obj)
-        except Exception as exc:
-            return Err(exc)
+
+        except Exception as e:
+            return Err(e)       
+        # try:
+        #     parts: list[Any] = []
+        #     idx = 0
+        #     while idx < len(raw):
+        #         length = struct.unpack_from("I", raw, idx)[0]
+        #         idx += 4
+        #         parts.append(cp.loads(raw[idx : idx + length]))
+        #         idx += length
+
+        #     attrs, methods, class_def = parts[:3]
+        #     obj:Axo = class_def.__new__(class_def)
+        #     # Restore state & methods
+        #     skip ={"__class__", "__dict__", "__module__", "__weakref__"} 
+        #     for k, v in attrs.items():
+        #         if k not in skip:
+        #             setattr(obj, k, v)
+        #     for name, fn in methods.items():
+        #         if name in skip:
+        #             continue  
+        #         fn = fn.original if include_original and hasattr(fn, "original") else fn
+        #         setattr(obj, name, types.MethodType(fn, obj))
+
+        #     return Ok(obj)
+        # except Exception as exc:
+        #     return Err(exc)
 
     # ------------------------------------------------------------------ #
     # Persistence
     # ------------------------------------------------------------------ #
-    def persistify(self, *, bucket_id: str = "", key: str = "") -> Result[str, Exception]:
+    async def persistify(self, *, bucket_id: str = "", key: str = "") -> Result[str, Exception]:
         """
         Store the current instance (bytes + class def) using the active runtime.
 
@@ -442,10 +613,8 @@ class Axo(metaclass=AxoMeta):
             bucket_id = bucket_id or self.get_axo_bucket_id()
             if rt is None:
                 raise Exception("No runtime was initialized.")
-            # print(rt)
-            raise Exception("BOOM!")
             # Persist via runtime helper
-            res = rt.persistify(instance=self, bucket_id=bucket_id, key=key)
+            res = await rt.persistify(instance=self, bucket_id=bucket_id, key=key)
             self._acx_remote = res.is_ok
             self._acx_local = not res.is_ok
             return res
@@ -454,5 +623,5 @@ class Axo(metaclass=AxoMeta):
 
     # Convenience: fetch by key/bucket
     @staticmethod
-    def get_by_key(key: str, *, bucket_id: str = "") -> Result["Axo", Exception]:
-        return get_runtime().get_active_object(key=key, bucket_id=bucket_id)
+    async def get_by_key(key: str, *, bucket_id: str = "") -> Result["Axo", Exception]:
+        return await get_runtime().get_active_object(key=key, bucket_id=bucket_id)

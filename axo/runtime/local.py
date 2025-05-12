@@ -63,10 +63,10 @@ class LocalRuntime(ActiveXRuntime):
 
     def __init__(
         self,
+        storage_service: StorageService,
         runtime_id: str = "",
         is_distributed: bool = False,
         maxsize: int = 100,
-        storage_service: Option[StorageService] = NONE,
     ) -> None:
         # Shared task queue ------------------------------------------------
         q: Queue = Queue(maxsize=maxsize)
@@ -76,9 +76,10 @@ class LocalRuntime(ActiveXRuntime):
         ep_manager.add_endpoint(endpoint_id="local-endpoint-0")
 
         # Storage backend (provided or default) ----------------------------
-        store: StorageService = storage_service.unwrap_or(
-            LocalStorageService(storage_service_id="local-store")
-        )
+        store: StorageService = storage_service
+        # .unwrap_or(
+            # LocalStorageService(storage_service_id="local-store")
+        # )
 
         # Scheduler --------------------------------------------------------
         scheduler = AxoScheduler(tasks=[], runtime_queue=q)

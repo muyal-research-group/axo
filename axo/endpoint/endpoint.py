@@ -154,6 +154,8 @@ class LocalEndpoint(EndpointX):
         try:
             fargs = fargs or []
             fkwargs = fkwargs or {}
+            print(fargs)
+            # print(f(ao,1,1))
             return Ok(f(ao, *fargs, **fkwargs)) if f else Err(Exception("No function"))
         except Exception as exc:
             return Err(exc)
@@ -278,6 +280,16 @@ class DistributedEndpoint(EndpointX):
         self._ctx = None
         self._connected = False
 
+
+    def ping(self):
+        try:
+            if not self._ensure_connection():
+                return Err(Exception("Unable to connect"))
+            self._req.send_multipart([b"axo", b"PING", b"{}"])
+            _ = self._req.recv_multipart()
+            return Ok(True)
+        except Exception as e:
+            return Err(e)
     # ------------------------------------------------------------------ #
     # CRUD
     # ------------------------------------------------------------------ #
@@ -315,12 +327,13 @@ class DistributedEndpoint(EndpointX):
 
         payload = json.dumps({"key": key, "fname": fname}).encode(self.encoding)
         try:
+            # print("METHO EXECUTION!",fkwargs,fargs)
             self._req.send_multipart(
                 [
                     b"axo",
                     b"METHOD.EXEC",
                     payload,
-                    cp.dumps(f),
+                    # cp.dumps(f),
                     cp.dumps(fargs or []),
                     cp.dumps(fkwargs or {}),
                 ]

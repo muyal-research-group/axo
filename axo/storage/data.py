@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import types
 import os
 import string
 import time
@@ -38,7 +39,7 @@ from mictlanx.v4.interfaces import Metadata
 import mictlanx.v4.interfaces as InterfaceX
 from mictlanx.utils import Chunks
 from xolo.utils.utils import Utils as XoloUtils
-from axo import Axo
+from axo import Axo,axo_method
 from axo.storage.metadata import MetadataX
 
 # --------------------------------------------------------------------------- #
@@ -316,7 +317,7 @@ class MictlanXStorageService(StorageService):
                 max_workers=int(os.environ.get("MICTLANX_MAX_WORKERS", max_workers)),
                 debug=True,
                 log_output_path=os.environ.get("MICTLANX_LOG_OUTPUT_PATH", log_path),
-                bucket_id=bucket_id,
+                # bucket_id=bucket_id,
             )
         )
 
@@ -422,15 +423,51 @@ class MictlanXStorageService(StorageService):
     async def _get_active_object(
         self, *, key: str, bucket_id: str
     ) -> Result[Axo, Exception]:
-        while True:
-            res = await self.client.get(bucket_id=bucket_id, key=key)
-            if res.is_err:
-                return Err(Exception(f"{key} not found"))
-            data = res.unwrap().value
-            if data:
-                return Axo.from_bytes(raw_obj=data)
-            logger.warning({"event": "EMPTY.RESPONSE", "key": key})
-            await asyncio.sleep(1)  # back‑off
+        code_res = await self.client.get(
+            bucket_id=bucket_id,
+            key=f"{key}_source_code", 
+            max_retries=100,
+            delay=2,
+            chunk_size="1MB"
+        )
+        attrs_res = await self.client.get(
+            bucket_id=bucket_id,
+            key=f"{key}_attrs",
+            max_retries=100,
+            delay=2,
+            chunk_size="1MB"
+        )
+        if code_res.is_err:
+            return Err(Exception("Failed to get source code"))
+        if attrs_res.is_err:
+            return Err(Exception("Failed to get attrs"))
+        
+        source_code_repsonse       = code_res.unwrap()
+        source_code                = cp.loads(source_code_repsonse.data.tobytes())
+        attrs_response             = attrs_res.unwrap()
+        attrs                      = cp.loads(attrs_response.data.tobytes())
+        mod                        = types.ModuleType("__axo_dynamic__")
+        mod.__dict__["Axo"]        = Axo
+        mod.__dict__["axo_method"] = axo_method
+        class_name                 = source_code_repsonse.metadatas[0].tags.get("axo_class_name")
+        exec(source_code, mod.__dict__)
+        X   = getattr(mod,class_name)
+        print("ATTRS", attrs)
+        obj = X(**attrs)
+        for attr_name, attr_value in attrs.items():
+            setattr(obj, attr_name, attr_value) 
+        return Ok(obj)
+
+        # res = await self.client.get(bucket_id=bucket_id, key=key)
+        # print(res)
+        # if res.is_err:
+        #     return Err(Exception(f"{key} not found"))
+        # response = res.unwrap()
+        # data = response.data.tobytes()
+        # if data:
+        #     return Axo.from_bytes(raw=data)
+        # logger.warning({"event": "EMPTY.RESPONSE", "key": key})
+        # await asyncio.sleep(1)  # back‑off
 
     # ------------------------------------------------------------------ #
     # PUT file

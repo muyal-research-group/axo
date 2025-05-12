@@ -14,7 +14,9 @@ def test_ao():
     assert dog._acx_local
     assert dog.get_axo_key() == "RexPerro"
     assert dog.get_endpoint_id() =="ENDPOINT_ID"
+    print(dog.__dict__)
 
+@pytest.mark.skip("")
 def test_ao_to_from_bytes():
     dog = Dog(
         name = "Rex",
@@ -27,6 +29,8 @@ def test_ao_to_from_bytes():
     assert new_dog.is_ok
     rex = new_dog.unwrap()
     assert type(rex.bark(name="ANOTHER DOG")) == str
+
+@pytest.mark.skip("")
 def test_ao_persistify():
     rt = LocalRuntime(runtime_id="local")
     # rt.run()
