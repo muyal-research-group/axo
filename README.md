@@ -35,22 +35,37 @@
 Following the next steps to run the example a simple calculator.
 
 ```python
-from activex.activex import ActiveX
-from activex.activex.decorators import activex
+from axo import Axo,axo_method
 from typing import List
+from axo.contextmanager import ActiveXContextManager
+from axo.endpoint.manager import DistributedEndpointManager
 
-class Calculator(ActiveX):
+dem = DistributedEndpointManager()
+dem.add_endpoint(
+    endpoint_id="activex-endpoint-0",
+    hostname="localhost",
+    protocol="tcp",
+    req_res_port=16667,
+    pubsub_port=16666
+)
+
+acm = ActiveXContextManager.distributed(
+    endpoint_manager=dem
+)
+
+class Calculator(Axo):
     def __init__(self):
       self.records:List[str] =[]
 
-    @activex
+    @axo_method
     def add(self,x:int,y:int):
       res = x+y
       self.records.append("Add {} + {} = {}".format(x,y,res))
       return res
 
 # It is very important to call the activex handler
-_ = ActiveXHandler.local()
+
+
 calc = Calculator()
 # Do some operations
 res = calc.add(10,10) # -> 20
