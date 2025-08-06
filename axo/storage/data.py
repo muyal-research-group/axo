@@ -26,8 +26,9 @@ import os
 import string
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterator, List, Tuple, TypeVar
-
+from typing import Any, Dict, Iterator, List, Tuple, TypeVar,Callable,Awaitable
+import functools
+import inspect
 import cloudpickle as cp
 import humanfriendly as hf
 from nanoid import generate as nanoid
@@ -41,22 +42,23 @@ from mictlanx.utils import Chunks
 from xolo.utils.utils import Utils as XoloUtils
 from axo import Axo,axo_method
 from axo.storage.metadata import MetadataX
-
+from axo.log import get_logger
+from axo.utils.decorators import guard_if_failed
 # --------------------------------------------------------------------------- #
 # Logging
 # --------------------------------------------------------------------------- #
-logger = logging.getLogger(__name__)
-if not logger.handlers:
-    _h = logging.StreamHandler()
-    _h.setFormatter(
-        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    )
-    logger.addHandler(_h)
-logger.setLevel(logging.DEBUG)
+logger = get_logger(name=__name__)
 
 # Typing helpers
 T = TypeVar("T")
 ChunkIter = Iterator[bytes]
+
+ComposedKey = str
+BucketId = str
+BallId = str
+
+
+
 
 # ============================================================================
 # Abstract base class
@@ -147,21 +149,38 @@ class LocalStorageService(StorageService):
     ``$AXO_SINK_PATH/<bucket>/<key>``.  Useful for unit tests or single‑node
     deployments.
     """
+    def __init__(self, storage_service_id:str, sink_path:str = os.environ.get("AXO_SINK_PATH", "/sink")):
+        super().__init__(storage_service_id)
+        self.sink_path = f"{sink_path}/axo"
+        self.is_failed = False
+        try:
+            os.makedirs(self.sink_path,exist_ok=True)
+        except Exception as e:
+            logger.error(str(e))
+            self.is_failed = True
+        
+        self.metadata:Dict[BucketId, Dict[BallId, Metadata]] = {}
+
 
     # -- Bucket‑level metadata ------------------------------------------
+    @guard_if_failed(log = logger.debug)
     async def get_bucket_metadata(
         self, bucket_id: str
     ) -> Result[List[Metadata], Exception]:
-        return Err(Exception("get_bucket_metadata not implemented yet"))
+        
+        if bucket_id in self.metadata:
+            return Ok(list(self.metadata[bucket_id].values()))
+        return Err(Exception(f"{bucket_id} not found"))
+        # return Err(Exception("get_bucket_metadata not implemented yet"))
 
     # -- Streaming download ---------------------------------------------
+    @guard_if_failed(log = logger.debug)
     async def get_streaming(
         self, bucket_id: str, key: str, chunk_size: str = "1MB"
     ) -> Result[Tuple[ChunkIter, Dict[str, Any]], Exception]:
         try:
             chunk_size_bytes = hf.parse_size(chunk_size)
-            sink_path = os.environ.get("AXO_SINK_PATH", "/sink")
-            path = f"{sink_path}/{bucket_id}/{key}"
+            path = f"{self.sink_path}/{bucket_id}/{key}"
             file = open(path, "rb")
 
             def _iter() -> ChunkIter:
@@ -179,6 +198,7 @@ class LocalStorageService(StorageService):
             return Err(exc)
 
     # -- PUT (bytes) -----------------------------------------------------
+    @guard_if_failed(log = logger.debug)
     async def put(
         self,
         bucket_id: str,
@@ -189,19 +209,38 @@ class LocalStorageService(StorageService):
     ) -> Result[str, Exception]:
         start = time.time()
         key = key or nanoid(alphabet=string.digits + string.ascii_lowercase)
-        sink_path = os.environ.get("AXO_SINK_PATH", "/sink")
-        os.makedirs(f"{sink_path}/{bucket_id}", exist_ok=True)
-        path = f"{sink_path}/{bucket_id}/{key}"
-        current_checksum = XoloUtils.sha256(data)
+        # sink_path = os.environ.get("AXO_SINK_PATH", "/sink")
+        os.makedirs(f"{self.sink_path}/{bucket_id}", exist_ok=True)
 
+        path = f"{self.sink_path}/{bucket_id}/{key}"
+        current_checksum = XoloUtils.sha256(data)
+        if os.path.exists(path=path):
+            (checksum, size) = XoloUtils.sha256_file(path=path)
+        else:
+            checksum,size = "",0 
+
+        metadata = Metadata(
+            key=key,
+            size=len(data),
+            checksum=current_checksum,
+            bucket_id=bucket_id,
+            ball_id= key,
+            producer_id= "axo",
+            tags={},
+            content_type= ""
+        )
         def __inner():
             with open(path, "wb") as fh:
                 fh.write(data)
             logger.debug("PUT.DATA %s %.3fs", path, time.time() - start)
+            self.metadata.setdefault(bucket_id, {})
+            self.metadata[bucket_id][key] = metadata
+            print("BUICKET",self.metadata)
             return Ok(path)
         if os.path.exists(path):
-            (checksum, size) = XoloUtils.sha256_file(path=path)
             if checksum == current_checksum:
+                self.metadata.setdefault(bucket_id,{})
+                self.metadata[bucket_id][key] = metadata
                 return Ok(path)
             else: 
                 return __inner()
@@ -210,6 +249,7 @@ class LocalStorageService(StorageService):
             return __inner()
 
     # -- PUT (streaming) -------------------------------------------------
+    @guard_if_failed(log = logger.debug)
     async def put_streaming(
         self,
         bucket_id: str,
@@ -227,30 +267,32 @@ class LocalStorageService(StorageService):
             return Err(exc)
 
     # -- GET (bytes) -----------------------------------------------------
+    @guard_if_failed(log = logger.debug)
     async def get(
         self, bucket_id: str, key: str, chunk_size: str = "1MB"
     ) -> Result[bytes, Exception]:
         try:
-            sink_path = os.environ.get("AXO_SINK_PATH", "/sink")
-            path = f"{sink_path}/{bucket_id}/{key}"
+            # sink_path = os.environ.get("AXO_SINK_PATH", "/sink")
+            path = f"{self.sink_path}/{bucket_id}/{key}"
             with open(path, "rb") as fh:
                 return Ok(fh.read())
         except Exception as exc:
             return Err(exc)
 
     # -- Active‑object helper -------------------------------------------
+    @guard_if_failed(log = logger.debug)
     async def _get_active_object(
         self, *, key: str, bucket_id: str
     ) -> Result[Axo, Exception]:
         try:
-            sink_path = os.environ.get("AXO_SINK_PATH", "/sink")
-            path = f"{sink_path}/{bucket_id}/{key}"
+            path = f"{self.sink_path}/{bucket_id}/{key}"
             with open(path, "rb") as fh:
                 return Axo.from_bytes(raw_obj=fh.read())
         except Exception as exc:
             return Err(exc)
 
     # -- PUT file --------------------------------------------------------
+    @guard_if_failed(log = logger.debug)
     async def put_data_from_file(
         self,
         source_path: str,

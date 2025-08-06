@@ -3,8 +3,17 @@ import string
 import humanfriendly as HF
 from typing import Dict
 import time as T
+from enum import Enum,auto
 ALPHABET = string.digits+string.ascii_lowercase
 
+class TaskStatus(Enum):
+    # CREATED = auto()
+    PENDING   = auto()
+    RUNNING   = auto()
+    SUCCESS   = auto()
+    FAILED    = auto()
+    TIMEOUT   = auto()
+    CANCELLED = auto()
 
 class Task:
     def __init__(self,
@@ -23,6 +32,7 @@ class Task:
         self.operation= operation
         self.metadata = metadata
         self.max_waiting_time = HF.parse_timespan(max_waiting_time)
+        self.status = TaskStatus.PENDING
     def get_formatted_max_waiting_time(self):
         return HF.format_timespan(self.max_waiting_time)
     def get_formatted_waiting_time(self):

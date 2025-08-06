@@ -22,13 +22,12 @@ from __future__ import annotations
 
 # ────────────────────────────────────────────────────────────────── stdlib ──
 import inspect
-import logging
 import sys
 import os
 import re
 import struct
 import string
-import time as _t
+import time as T
 import types
 from functools import wraps
 from typing import (
@@ -42,7 +41,8 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
-    Annotated
+    Annotated,
+    cast
 )
 
 # ─────────────────────────────────────────────────────────────── 3rd‑party ──
@@ -51,11 +51,13 @@ from nanoid import generate as nanoid
 from option import Err, Ok, Result
 from pydantic import BaseModel, Field
 from pydantic.functional_validators import AfterValidator
+import wrapt
 
 # ──────────────────────────────────────────────────────────────── project ───
 from axo.runtime import get_runtime
 from axo.utils import serialize_and_yield_chunks
-from mictlanx.logger.log import Log
+from axo.log import get_logger
+# from axo.endpoint.endpoint import EndpointX
 
 # ───────────────────────────────────────────────────────────────── constants ─
 ALPHABET = string.ascii_lowercase + string.digits
@@ -68,22 +70,7 @@ AXO_PROPERTY_PREFIX = "_acx_property_"
 R = TypeVar("R")  # generic return type for Axo.call
 
 # ─────────────────────────────────────────────────────── logger configuration
-if AXO_PRODUCTION_LOG_ENABLE:
-    logger = Log(
-        name=__name__,
-        console_handler_filter=lambda _: AXO_DEBUG,
-        path=AXO_LOG_PATH,
-    )
-else:
-    logger = logging.getLogger(__name__)
-    if not logger.handlers:
-        _h = logging.StreamHandler()
-        _h.setFormatter(
-            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        )
-        logger.addHandler(_h)
-    logger.setLevel(logging.DEBUG)
-
+logger = get_logger(name=__name__)
 
 # =========================================================================== #
 # Small helpers
@@ -111,70 +98,108 @@ AxoObjectId = Annotated[Optional[str], AfterValidator(_make_id_validator(AXO_ID_
 # =========================================================================== #
 # Decorators
 # =========================================================================== #
-def axo_method(func: Callable[..., R]) -> Callable[..., Result[R, Exception]]:
-    """
-    Decorator that routes a *method call* through the runtime.
+# @wrapt.decorator
 
-    *   Collects bucket/key information and injects them into **kwargs**.
-    *   If the runtime is distributed and the object is still *local*,
-        it is first *persistified*.
-    *   Returns a :class:`Result`.
-    """
-
-    @wraps(func)
-    def _wrapper(self: "Axo", *args: Any, **kwargs: Any) -> Result[R, Exception]:
+def axo_method(wrapped: Callable[..., R]) -> Callable[..., Result[R, Exception]]:
+    @wrapt.decorator
+    def _wrapper(wrapped_func, instance, args, kwargs):
         try:
-            start = _t.time()
-            rt = get_runtime()  # current LocalRuntime or DistributedRuntime
+            t1 = T.time()
+            rt = get_runtime()
             ep = rt.endpoint_manager.get_endpoint(kwargs.get("axo_endpoint_id", "") )
-            self.set_endpoint_id(ep.endpoint_id)
+            instance.set_endpoint_id(ep.endpoint_id)
 
-            # Inject default kwargs if missing
             kwargs.setdefault("axo_endpoint_id", ep.endpoint_id)
-            kwargs.setdefault("axo_key", self.get_axo_key())
-            kwargs.setdefault("axo_bucket_id", self.get_axo_bucket_id())
-            kwargs.setdefault("axo_sink_bucket_id", self.get_sink_bucket_id())
-            kwargs.setdefault("axo_source_bucket_id", self.get_source_bucket_id())
-            print(self.__dict__)
+            kwargs.setdefault("axo_key", instance.get_axo_key())
+            kwargs.setdefault("axo_bucket_id", instance.get_axo_bucket_id())
+            kwargs.setdefault("axo_sink_bucket_id", instance.get_sink_bucket_id())
+            kwargs.setdefault("axo_source_bucket_id", instance.get_source_bucket_id())
+            # is_distributed =  rt.get_is_distributed
             if not rt.is_distributed:
                 kwargs.setdefault("storage", rt.storage_service)
-
-            # Persist local instance if we are about to call a remote endpoint
-            # print(self._acx_local, rt.is_distributed)
-            # if rt.is_distributed and self._acx_local:
+            
+            if rt.is_distributed and instance._acx_local:
                 return Err(Exception("First you must persistify the object."))
-                # self.persistify()
-
-            logger.debug(
-                {
-                    "event": "METHOD.EXEC",
-                    "fname": func.__name__,
-                    **{k: kwargs[k] for k in ("axo_key", "axo_endpoint_id")},
-                }
-            )
-            print("ARGS",args)
+            fname = wrapped_func.__name__
             res = ep.method_execution(
-                key=self.get_axo_key(),
-                fname=func.__name__,
-                ao=self,
-                f=func,
-                fargs=args,
-                fkwargs=kwargs,
+                key     = instance.get_axo_key(),
+                fname   = fname,
+                ao      = instance,
+                f       = wrapped_func,
+                fargs   = args,
+                fkwargs = kwargs,
             )
-            logger.info(
-                {
-                    "event": "METHOD.EXEC",
-                    "fname": func.__name__,
-                    "response_time": _t.time() - start,
-                }
-            )
+            logger.info({
+                "event": "METHOD.EXEC",
+                "mode":"DISTRIBUTED" if rt.is_distributed else "LOCAL",
+                "fname": fname,
+                "ok": res.is_ok,
+                "response_time": T.time() - t1,  # update this properly
+            })
             return res
-        except Exception as exc:
-            logger.exception("METHOD.EXEC failed")
-            return Err(exc)
+        except Exception as e:
+            logger.error(f"METHOD.EXEC failed: {e}")
+            return Err(e)
 
-    _wrapper.original = func  # type: ignore[attr-defined]
-    return _wrapper
+    return cast(Callable[..., Result[R, Exception]],_wrapper(wrapped))
+
+
+# def axo_method(func: Callable[..., R]) -> Callable[..., Result[R, Exception]]:
+#     """
+#     Decorator that routes a *method call* through the runtime.
+
+#     *   Collects bucket/key information and injects them into **kwargs**.
+#     *   If the runtime is distributed and the object is still *local*,
+#         it is first *persistified*.
+#     *   Returns a :class:`Result`.
+#     """
+
+#     @wraps(func)
+#     def _wrapper(self: "Axo", *args: Any, **kwargs: Any) -> Result[R, Exception]:
+#         try:
+#             start = T.time()
+#             rt = get_runtime()  # current LocalRuntime or DistributedRuntime
+#             ep = rt.endpoint_manager.get_endpoint(kwargs.get("axo_endpoint_id", "") )
+#             self.set_endpoint_id(ep.endpoint_id)
+
+#             # Inject default kwargs if missing
+#             kwargs.setdefault("axo_endpoint_id", ep.endpoint_id)
+#             kwargs.setdefault("axo_key", self.get_axo_key())
+#             kwargs.setdefault("axo_bucket_id", self.get_axo_bucket_id())
+#             kwargs.setdefault("axo_sink_bucket_id", self.get_sink_bucket_id())
+#             kwargs.setdefault("axo_source_bucket_id", self.get_source_bucket_id())
+#             if not rt.get_is_distributed:
+#                 kwargs.setdefault("storage", rt.storage_service)
+
+#             # Persist local instance if we are about to call a remote endpoint
+#             # print(self._acx_local, rt.is_distributed)
+#             if rt.is_distributed and self._acx_local:
+#                 return Err(Exception("First you must persistify the object."))
+#                 # self.persistify()
+
+#             res = ep.method_execution(
+#                 key=self.get_axo_key(),
+#                 fname=func.__name__,
+#                 ao=self,
+#                 f=func,
+#                 fargs=args,
+#                 fkwargs=kwargs,
+#             )
+#             logger.info(
+#                 {
+#                     "event": "METHOD.EXEC",
+#                     "fname": func.__name__,
+#                     "ok":res.is_ok,
+#                     "response_time": T.time() - start,
+#                 }
+#             )
+#             return res
+#         except Exception as e:
+#             logger.error(f"METHOD.EXEC failed: {e}")
+#             return Err(e)
+
+#     _wrapper.original = func  # type: ignore[attr-defined]
+#     return _wrapper
 
 
 def axo_task(func: Callable[..., R]) -> Callable[..., Result[bool, Exception]]:
@@ -345,7 +370,10 @@ class Axo(metaclass=AxoMeta):
         return eid
 
     def get_endpoint_id(self) -> str:
-        return self._acx_metadata.axo_endpoint_id or self.set_endpoint_id()
+        # print()
+        e_id = self._acx_metadata.axo_endpoint_id
+        return self.set_endpoint_id() if e_id == None else ""
+        # return self._acx_metadata.axo_endpoint_id  or self.set_endpoint_id()
 
     # ------------------------------------------------------------------ #
     # Construction magic

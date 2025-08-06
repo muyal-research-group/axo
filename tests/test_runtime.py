@@ -1,6 +1,17 @@
 import pytest 
+import time as T
 from axo.runtime.local import LocalRuntime
 from axo.storage.data import LocalStorageService
+from axo import Axo,axo_method
+import hashlib as H
+
+class Hasher(Axo):
+    @axo_method
+    def sha256(self,x:bytes):
+        h = H.sha256()
+        h.update(x)
+        return h.digest()
+    
 
 @pytest.mark.asyncio
 async def test_runtime():
@@ -11,4 +22,7 @@ async def test_runtime():
             storage_service_id="local_ss"
         )
     )
-    assert lr.getName() == runtime_id
+    x = Hasher(axo_key = "hasher_0")
+    print(lr.persistify(instance=x))
+    T.sleep(5)
+    assert lr.name == runtime_id

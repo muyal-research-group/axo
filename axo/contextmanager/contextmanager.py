@@ -1,14 +1,16 @@
 from axo.runtime import set_runtime,get_runtime
 from axo.runtime.local import LocalRuntime
 from axo.runtime.distributed import DistributedRuntime
-from axo.runtime.core import ActiveXRuntime
+from axo.runtime.runtime import ActiveXRuntime
 from axo.endpoint.manager import DistributedEndpointManager
-from mictlanx.logger.tezcanalyticx.tezcanalyticx import TezcanalyticXParams
+from axo.storage.data import StorageService,LocalStorageService
+from axo.scheduler import AxoScheduler
 from option import Option,NONE
 from typing import Optional
 from nanoid import generate as nanoid
+from queue import Queue
 import string
-class ActiveXContextManager:
+class AxoContextManager:
     is_running = False
     def __init__(self, runtime:Optional[ActiveXRuntime] = None):
         self.prev_runtime = get_runtime()
@@ -22,22 +24,32 @@ class ActiveXContextManager:
         self.is_running = True
 
     @staticmethod
-    def local()->'ActiveXContextManager':
-        return ActiveXContextManager(
+    def local()->'AxoContextManager':
+        suffix = nanoid(alphabet=string.ascii_lowercase+string.digits)
+        return AxoContextManager(
             runtime= LocalRuntime(
-                runtime_id="local-{}".format(nanoid(alphabet=string.ascii_lowercase+string.digits)),
+                runtime_id      = "local-{}".format(suffix),
+                storage_service = LocalStorageService(storage_service_id=f"local-storage-{suffix}")
             )
         )
         
     @staticmethod
     def distributed(
         endpoint_manager:DistributedEndpointManager,
-    )->'ActiveXContextManager':
+        storage_service:Option[StorageService] = NONE,
+        maxsize:int =100
+    )->'AxoContextManager':
         runtime_id = "distributed-{}".format(nanoid(alphabet=string.ascii_lowercase+string.digits))
-        return ActiveXContextManager(
+        q = Queue(maxsize=maxsize)
+        return AxoContextManager(
             runtime= DistributedRuntime(
                 runtime_id=runtime_id,
+                q = q,
                 endpoint_manager=endpoint_manager,
+                storage_service=storage_service, 
+                scheduler = AxoScheduler(
+                    runtime_queue=q,
+                )
             )
         )
         
@@ -47,6 +59,17 @@ class ActiveXContextManager:
         self.runtime.stop()
         set_runtime(self.prev_runtime)
         self.is_running=False
+
+    # ---------------------------------------------------------------- #
+    # Context‐manager protocol
+    # ---------------------------------------------------------------- #
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.stop()
+        # returning False will re-raise any exception; True would swallow it
+        return False
 
     def __del__(self):
         self.stop()

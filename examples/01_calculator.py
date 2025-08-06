@@ -1,9 +1,9 @@
-from axo.contextmanager import ActiveXContextManager
+from axo.contextmanager import AxoContextManager
 import logging
 import os
 import more_itertools as mit
 import sys
-from axo.contextmanager.contextmanager import ActiveXContextManager
+from axo.contextmanager.contextmanager import AxoContextManager
 from axo.endpoint import EndpointManagerX
 # from common import Calculator
 # from activex.runtime.local import LocalRuntime
@@ -31,7 +31,7 @@ endpoint_manager.add_endpoint(
     req_res_port=AXO_ENDPOINT_REQ_RES_PORT,
     pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
 )
-axocm              = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
+axocm              = AxoContextManager.distributed(endpoint_manager=endpoint_manager)
     
 def main():
     """ 

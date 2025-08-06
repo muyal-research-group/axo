@@ -1,5 +1,5 @@
 
-from axo.contextmanager import ActiveXContextManager
+from axo.contextmanager import AxoContextManager
 import logging
 from common import HeatmapProducer
 import more_itertools as mit
@@ -34,7 +34,7 @@ def main():
     key:str = mit.nth(args, 0, "")
 
     logger.debug("Step 1. init ActiveX object handler")
-    _ = ActiveXContextManager.distributed()
+    _ = AxoContextManager.distributed()
     logger.debug("Step 2. create an object instance")
     obj:HeatmapProducer = HeatmapProducer.get_by_key(key=key).unwrap()
     print(obj.df)

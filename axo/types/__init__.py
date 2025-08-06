@@ -5,6 +5,7 @@ from axo.endpoint.endpoint import EndpointX
 # Endpoint‑manager *protocol*
 # =========================================================================== #
 E_co = TypeVar("E_co", bound=EndpointX, covariant=True)
+
 class EndpointManagerP(Protocol[E_co]):
     """
     Minimal contract required by ActiveXRuntime.

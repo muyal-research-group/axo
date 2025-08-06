@@ -1,7 +1,7 @@
 from typing import Dict
 import unittest
 from axo import Axo
-from axo.contextmanager.contextmanager import ActiveXContextManager
+from axo.contextmanager.contextmanager import AxoContextManager
 from axo.endpoint import EndpointManagerX,EndpointX
 from axo.runtime.local import LocalRuntime
 from axo.storage.data import MictlanXStorageService
@@ -60,7 +60,7 @@ class ActiveXTest(unittest.TestCase):
     
     @unittest.skip("")
     def test_hybrid_context(self):
-        axcm = ActiveXContextManager(
+        axcm = AxoContextManager(
             runtime= LocalRuntime(
                 storage_service= Some(MictlanXStorageService(
                     log_path="/log",
@@ -75,7 +75,7 @@ class ActiveXTest(unittest.TestCase):
         print(axcm)
     @unittest.skip("")
     def test_local_context_layer_cipher(self):
-        axcm    = ActiveXContextManager.local()
+        axcm    = AxoContextManager.local()
         cipher  = Cipher(security_level=128)
         sk      = cipher.key_gen()
         
@@ -110,7 +110,7 @@ class ActiveXTest(unittest.TestCase):
             pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
         )
 
-        ax     = ActiveXContextManager.distributed(
+        ax     = AxoContextManager.distributed(
             endpoint_manager=endpoint_manager,
             tezcanalyticx_params= Some(
                 TezcanalyticXParams(
@@ -164,7 +164,7 @@ class ActiveXTest(unittest.TestCase):
             req_res_port=AXO_ENDPOINT_REQ_RES_PORT,
             pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
         )
-        axcm           = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
+        axcm           = AxoContextManager.distributed(endpoint_manager=endpoint_manager)
         bucket_id      = "39xoc05wyy0nunof"
         key            = "x3fxeow4f0wje3k5"
         
@@ -193,7 +193,7 @@ class ActiveXTest(unittest.TestCase):
     # 
     @unittest.skip("")
     def test_local_context_layer(self):
-        ahx = ActiveXContextManager.local()
+        ahx = AxoContextManager.local()
         dog_obj = Dog(name="Rex")
         res = dog_obj.bark(name = "Rory")
 
@@ -215,7 +215,7 @@ class ActiveXTest(unittest.TestCase):
             pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
         )
 
-        ax     = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
+        ax     = AxoContextManager.distributed(endpoint_manager=endpoint_manager)
         dog    = Dog(name="Rex-0")
         result = dog.persistify()
         res = dog.bark(
@@ -241,7 +241,7 @@ class ActiveXTest(unittest.TestCase):
             pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
         )
 
-        ax     = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
+        ax     = AxoContextManager.distributed(endpoint_manager=endpoint_manager)
         bucket_id = "hb2qlc4e1mrmxem3"
         key = "zlqp1xcjivjmfj83"
         get_obj_result = Axo.get_by_key(bucket_id=bucket_id,key=key)
@@ -269,7 +269,7 @@ class ActiveXTest(unittest.TestCase):
             pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
         )
 
-        ax     = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
+        ax     = AxoContextManager.distributed(endpoint_manager=endpoint_manager)
         dog    = Dog(name="Rex-0")
         result = dog.persistify()
         res = dog.bark(
@@ -300,7 +300,7 @@ class ActiveXTest(unittest.TestCase):
             pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
         )
 
-        ax               = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
+        ax               = AxoContextManager.distributed(endpoint_manager=endpoint_manager)
         i = 0 
         dog = Dog(name="Rex-{}".format(i))
         res = dog.persistify()
@@ -317,7 +317,7 @@ class ActiveXTest(unittest.TestCase):
                 pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
             )
         })
-        _ = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
+        _ = AxoContextManager.distributed(endpoint_manager=endpoint_manager)
         result = Axo.get_by_key("kvs74ah19gvr3r4d")
         if result.is_ok:
             obj = result.unwrap()
@@ -355,7 +355,7 @@ class ActiveXTest(unittest.TestCase):
                 pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
             )
         })
-        _ = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
+        _ = AxoContextManager.distributed(endpoint_manager=endpoint_manager)
         calc = Calculator()
         x,y = 1,5
         add_result = calc.add(1,2)
@@ -372,7 +372,7 @@ class ActiveXTest(unittest.TestCase):
                 pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
             )
         })
-        _ = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
+        _ = AxoContextManager.distributed(endpoint_manager=endpoint_manager)
         calc:Calculator = Calculator.get_by_key("mycalculatorobject").unwrap()
         print("CALCUILATOR",calc)
         x,y = 1,5
@@ -394,7 +394,7 @@ class ActiveXTest(unittest.TestCase):
                 pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
             )
         })
-        _ = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
+        _ = AxoContextManager.distributed(endpoint_manager=endpoint_manager)
         # handler  = ActiveXContextManager.distributed()
         obj:Dog = Dog.get_by_key(key="86h6tx5dkbkp579l")
         obj.bark()
@@ -445,7 +445,7 @@ class ActiveXTest(unittest.TestCase):
                 pubsub_port=AXO_ENDPOINT_PUBSUB_PORT
             )
         })
-        _ = ActiveXContextManager.distributed(endpoint_manager=endpoint_manager)
+        _ = AxoContextManager.distributed(endpoint_manager=endpoint_manager)
 
         dog_obj = Dog()
         # First make persistent

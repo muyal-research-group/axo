@@ -1,7 +1,7 @@
 import time as T
 from axo import Axo,axo_method
 from typing import Generator,Any,List
-from axo.contextmanager import ActiveXContextManager
+from axo.contextmanager import AxoContextManager
 import humanfriendly as  HF
 from axo.endpoint import EndpointManagerX
 import cloudpickle as CP
@@ -242,7 +242,7 @@ def mainx():
         pubsub_port=AXO_ENDPOINT_PUBSUB_PORT,
         req_res_port=AXO_ENDPOINT_REQ_RES_PORT
     )
-    axcm = ActiveXContextManager.distributed(
+    axcm = AxoContextManager.distributed(
         endpoint_manager= endpoint_manager
     )
     # # axcm = ActiveXContextManager.local()

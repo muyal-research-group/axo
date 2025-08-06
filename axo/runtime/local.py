@@ -18,33 +18,33 @@ Because everything runs in‑process, no network calls are performed, making
 
 from __future__ import annotations
 
-import logging
 from queue import Queue
-from typing import Optional
+import time as T
+import cloudpickle as CP
 
 from option import NONE, Option
-from axo.endpoint.manager import LocalEndpointManager
-from axo.runtime.core import ActiveXRuntime
-from axo.scheduler import AxoScheduler
-from axo.storage.data import LocalStorageService, StorageService
-
+from axo import Axo
+from axo.endpoint.manager import LocalEndpointManager,EndpointManagerP
+from axo.endpoint.endpoint import EndpointX
+from axo.runtime.runtime import ActiveXRuntime
+from axo.scheduler import AxoScheduler,Scheduler
+from axo.storage.data import StorageService
+from axo.log import get_logger
+from threading import Thread
+from axo.models import Task
+from option import Result,Ok,Err
+from weakref import WeakKeyDictionary
 # --------------------------------------------------------------------------- #
 # Logger (module‑local)
 # --------------------------------------------------------------------------- #
-logger = logging.getLogger(__name__)
-if not logger.handlers:
-    _h = logging.StreamHandler()
-    _h.setFormatter(
-        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    )
-    logger.addHandler(_h)
-logger.setLevel(logging.DEBUG)
+logger = get_logger(name=__name__)
+# logging.getLogger(__name__)
 
 
 # ============================================================================
 # Local runtime
 # ============================================================================
-class LocalRuntime(ActiveXRuntime):
+class LocalRuntime(ActiveXRuntime,Thread):
     """
     Single‑process runtime: tasks are executed in the current Python interpreter
     without any remote calls.
@@ -65,39 +65,150 @@ class LocalRuntime(ActiveXRuntime):
         self,
         storage_service: StorageService,
         runtime_id: str = "",
-        is_distributed: bool = False,
+        # is_distributed: bool = False,
         maxsize: int = 100,
+        q_tick_s:int = 1,
     ) -> None:
+        super().__init__(name=runtime_id, daemon=True)
         # Shared task queue ------------------------------------------------
-        q: Queue = Queue(maxsize=maxsize)
+        self.__q: Queue = Queue(maxsize=maxsize)
 
         # Endpoint manager with a single local endpoint --------------------
-        ep_manager = LocalEndpointManager()
-        ep_manager.add_endpoint(endpoint_id="local-endpoint-0")
+        self.__endpoint_manager = LocalEndpointManager()
+        self.__endpoint_manager.add_endpoint(endpoint_id="axo-endpoint-0")
 
         # Storage backend (provided or default) ----------------------------
-        store: StorageService = storage_service
+        self.__storage_service: StorageService = storage_service
+        self.__inmemory_objects = WeakKeyDictionary()
         # .unwrap_or(
             # LocalStorageService(storage_service_id="local-store")
         # )
-
+        self.__is_running = True
         # Scheduler --------------------------------------------------------
-        scheduler = AxoScheduler(tasks=[], runtime_queue=q)
+        self.__scheduler = AxoScheduler(tasks=[], runtime_queue=self.__q)
+        self.__q_tick_s = q_tick_s
+        self.start()
 
         # Bootstrap the base class ----------------------------------------
-        super().__init__(
-            q=q,
-            endpoint_manager=ep_manager,
-            storage_service=store,
-            scheduler=scheduler,
-            runtime_id=runtime_id,
-            is_distributed=is_distributed,
-        )
+        # super().__init__(
+        #     q=q,
+        #     endpoint_manager=self.ep_manager,
+        #     storage_service=storage_service,
+        #     scheduler=self.scheduler,
+        #     runtime_id=runtime_id,
+        #     is_distributed=is_distributed,
+        # )
+    @property
+    def q(self):
+        return self.__q
+    @property
+    def is_distributed(self)->bool:
+        return False
+    
+    @property
+    def scheduler(self)->Scheduler:
+        return self.__scheduler
+    @property
+    def storage_service(self)->StorageService:
+        return self.__storage_service
+    @property
+    def endpoint_manager(self)->EndpointManagerP:
+        return self.__endpoint_manager
+    @property
+    def inmemory_objects(self)->WeakKeyDictionary[Axo,None]:
+        return self.__inmemory_objects
+    @property
+    def is_running(self)->bool:
+        return self.__is_running  
+    def get_active_object(self, *, bucket_id, key):
+        return self.storage_service.get()
+        # return super().get_active_object(bucket_id=bucket_id, key=key)
+
+    async def persistify(self, instance:Axo, *, bucket_id = "axo", key = None)->Result[str,Exception]:
+        try: 
+            t1 = T.time()
+            key = key or instance.get_axo_key()
+            endpoint:EndpointX = self.endpoint_manager.get_endpoint(instance.get_endpoint_id())
+            meta_res = endpoint.put(key=key, value=instance._acx_metadata)
+            if meta_res.is_err:
+                logger.error({
+                    "error":str(meta_res.unwrap_err())
+                })
+                return Err(meta_res.unwrap_err())
+            logger.info({
+                "event":"ENDPOINT.PUT",
+                "mode":"LOCAL",
+                "endpoint_id":endpoint.endpoint_id, 
+                "axo_bucket_id":instance.get_axo_bucket_id(),
+                "axo_key":instance.get_axo_key(),
+                "service_time":T.time() - t1
+            })
+            # 2) class definition
+            attrs,methods, class_def, class_code = instance.get_raw_parts()
+
+            t1 = T.time()
+            attrs_put_result = await self.storage_service.put(
+                bucket_id=bucket_id,
+                key = f"{key}_attrs",
+                tags = {
+                    "module": instance._acx_metadata.axo_module,
+                    "class_name": instance._acx_metadata.axo_class_name,
+                }, 
+                data =CP.dumps(attrs)
+            )
+            if attrs_put_result.is_err:
+                logger.error({
+                    "error":str(attrs_put_result.unwrap_err())
+                })
+                return Err(attrs_put_result.unwrap_err())
+
+            tags = instance._acx_metadata.to_json_with_string_values()
+            class_code_put_result = await self.storage_service.put(
+                bucket_id=bucket_id,
+                key = f"{key}_source_code",
+                tags = {
+                    **tags
+                }, 
+                data = CP.dumps(class_code.encode("utf-8"))
+            )
+            if class_code_put_result.is_err:
+                return Err(class_code_put_result.unwrap_err())  
+            
+            
+            logger.info({
+                "event":"ENDPOINT.PUT",
+                "mode":"LOCAL",
+                "endpoint_id":endpoint.endpoint_id, 
+                "axo_bucket_id":instance.get_axo_bucket_id(),
+                "axo_key":instance.get_axo_key(),
+                "service_time":T.time() - t1
+            })
+            return Ok(key)
+        except Exception as e:
+            return Err(e)
+        # return Err(Exception("Incompleted implementation"))
+
+        # return super().persistify(instance, bucket_id=bucket_id, key=key)
+    def _handle_put_task(self, task):
+        return super()._handle_put_task(task)
+    def run(self):
+        """Main consumer loop."""
+        while self.is_running:
+            task: Task = self.q.get()
+            if T.time() < task.executes_at:
+                self.q.put(task)
+                # continue
+            elif task.operation == "PUT":
+                self._handle_put_task(task)
+            elif task.operation == "DROP":
+                logger.debug("DROP not implemented (%s)", task.id)
+            T.sleep(self.__q_tick_s)
+            
 
     # ------------------------------------------------------------------ #
     # Runtime control
     # ------------------------------------------------------------------ #
     def stop(self) -> None:
         """Gracefully stop the background thread."""
-        logger.debug("Stopping LocalRuntime %s …", self.runtime_id)
+        logger.debug("Stopping LocalRuntime %s …", self.name)
         self._running = False

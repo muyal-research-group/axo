@@ -1,0 +1,11 @@
+{
+    "timestamp": "2024-10-17 01:54:33,771",
+    "level": "ERROR",
+    "logger_name": "activex-mictlanx",
+    "thread_name": "MainThread",
+    "msg": [
+        "{\"detail\":\"Put metadata failed, no available peers.\"}"
+    ],
+    "status_code": 500
+}
+

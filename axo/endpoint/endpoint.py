@@ -133,8 +133,8 @@ class LocalEndpoint(EndpointX):
         self._db: Dict[str, MetadataX] = {}
 
     # -- CRUD ------------------------------------------------------------
-    def put(self, key: str, metadata: MetadataX) -> Result[str, Exception]:
-        self._db.setdefault(key, metadata)
+    def put(self, key: str, value: MetadataX) -> Result[str, Exception]:
+        self._db.setdefault(key, value)
         return Ok(key)
 
     def get(self, key: str) -> Result[MetadataX, Exception]:
@@ -156,7 +156,8 @@ class LocalEndpoint(EndpointX):
             fkwargs = fkwargs or {}
             print(fargs)
             # print(f(ao,1,1))
-            return Ok(f(ao, *fargs, **fkwargs)) if f else Err(Exception("No function"))
+            # return Ok(f(ao, *fargs, **fkwargs)) if f else Err(Exception("No function"))
+            return Ok(f(*fargs, **fkwargs)) if f else Err(Exception("No function"))
         except Exception as exc:
             return Err(exc)
 
@@ -293,11 +294,11 @@ class DistributedEndpoint(EndpointX):
     # ------------------------------------------------------------------ #
     # CRUD
     # ------------------------------------------------------------------ #
-    def put(self, key: str, metadata: MetadataX) -> Result[str, Exception]:
+    def put(self, key: str, value: MetadataX) -> Result[str, Exception]:
         if not self._ensure_connection():
             return Err(Exception("Unable to connect"))
 
-        payload = json.dumps(metadata.model_dump()).encode(self.encoding)
+        payload = json.dumps(value.model_dump()).encode(self.encoding)
         try:
             self._req.send_multipart([b"axo", b"PUT.METADATA", payload])
             _ = self._req.recv_multipart()
@@ -328,6 +329,9 @@ class DistributedEndpoint(EndpointX):
         payload = json.dumps({"key": key, "fname": fname}).encode(self.encoding)
         try:
             # print("METHO EXECUTION!",fkwargs,fargs)
+            if "storage" in fkwargs:
+                del fkwargs["storage"]
+                
             self._req.send_multipart(
                 [
                     b"axo",

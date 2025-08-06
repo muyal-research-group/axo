@@ -12,7 +12,7 @@ from mictlanx.utils.index import Utils as UtilsX
 from xolo.utils.utils import Utils as XoloUtils
 # 
 from axo import Axo,axo_method,axo_task
-from axo.contextmanager import ActiveXContextManager
+from axo.contextmanager import AxoContextManager
 from axo.endpoint import EndpointManagerX
 from axo.storage import StorageService
 from axo.polymorphisim import FilterXOut, PipeAndFilter,FilterX,SourceX,SinkX,BucketSource,BucketSink,ManagerWorkerX,WorkerX
@@ -35,7 +35,7 @@ endpoint_manager.add_endpoint(
     pubsub_port=AXO_ENDPOINT_PUBSUB_PORT,
     req_res_port=AXO_ENDPOINT_REQ_RES_PORT
 )
-axcm = ActiveXContextManager.distributed(
+axcm = AxoContextManager.distributed(
     endpoint_manager= endpoint_manager
 )
 

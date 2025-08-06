@@ -1,4 +1,4 @@
-from axo.contextmanager import ActiveXContextManager
+from axo.contextmanager import AxoContextManager
 from common import Calculator
 import more_itertools as mit
 import sys
@@ -35,7 +35,7 @@ def main():
     """
     key = mit.nth(args,0,"calculatorexample02") 
     logger.debug("Step 1. init ActiveX object handler")
-    _ = ActiveXContextManager.distributed()
+    _ = AxoContextManager.distributed()
     logger.debug("Step 2. get an object instance - key={}".format(key))
     obj:Calculator = Calculator.get_by_key(key=key).unwrap()
 

@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor,as_completed
 import unittest as UT
 # Axo 
 from axo import Axo
-from axo.contextmanager.contextmanager import ActiveXContextManager
+from axo.contextmanager.contextmanager import AxoContextManager
 from axo.endpoint import EndpointManagerX
 
 AXO_ENDPOINT_ID           = os.environ.get("AXO_ENDPOINT_ID","activex-endpoint-0")
@@ -59,7 +59,7 @@ class AxoBasics(UT.TestCase):
     def test_create_ao(self):
         
         # Init the distributed context manager
-        ax  = ActiveXContextManager.distributed(
+        ax  = AxoContextManager.distributed(
             endpoint_manager=AxoBasics.endpoint_manager
         )
 
@@ -74,7 +74,7 @@ class AxoBasics(UT.TestCase):
     @UT.skip("")
     def test_create_aos(self):
         # Init the distributed context manager
-        ax              = ActiveXContextManager.distributed(
+        ax              = AxoContextManager.distributed(
             endpoint_manager=AxoBasics.endpoint_manager
         )
         # Create an instance of a Dog (Active Object)
@@ -96,7 +96,7 @@ class AxoBasics(UT.TestCase):
     @UT.skip("")
     def test_N_gets(self):
         # Init the distributed context manager
-        ax              = ActiveXContextManager.distributed(
+        ax              = AxoContextManager.distributed(
             endpoint_manager = AxoBasics.endpoint_manager
         )
 

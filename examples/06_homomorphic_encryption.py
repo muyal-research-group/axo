@@ -1,6 +1,6 @@
 
 
-from axo.contextmanager import ActiveXContextManager
+from axo.contextmanager import AxoContextManager
 
 # from activex.storage import Put
 import logging
@@ -155,7 +155,7 @@ def main():
     key:str = mit.nth(args, 0, "")
 
     logger.debug("Step 1. init ActiveX object handler")
-    _ = ActiveXContextManager.distributed()
+    _ = AxoContextManager.distributed()
     logger.debug("Step 2. create an object instance")
     # The allocation of the input data occurs in another component
     runtime = get_runtime()

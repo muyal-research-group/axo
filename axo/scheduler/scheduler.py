@@ -22,16 +22,14 @@ from __future__ import annotations
 import logging
 import os
 import time as T
-from abc import ABC
+from abc import ABC,abstractmethod
 from queue import Queue
 from threading import Thread
 from typing import List
-
-from nanoid import generate as nanoid  # noqa: F401 (imported for future use)
-
 import humanfriendly as HF
 
 import axo.utils as utilx
+from axo.tasks.manager import TasksManager
 from axo.models import Task
 
 # --------------------------------------------------------------------------- #
@@ -50,7 +48,7 @@ logger.setLevel(logging.DEBUG)
 # ============================================================================
 # Generic scheduler
 # ============================================================================
-class Scheduler(ABC, Thread):
+class Scheduler(ABC,Thread):
     """
     Base class for queue‑driven schedulers.
 
@@ -65,23 +63,60 @@ class Scheduler(ABC, Thread):
     maxsize :
         Maximum size of the internal queue (back‑pressure).
     """
+    @abstractmethod
+    def schedule(self, task: Task) -> None:
+        pass
+    @abstractmethod
+    def stop(self) -> None:
+        pass
+    @abstractmethod
+    def _requeue(self, task: Task, now: float) -> None:
+        pass
+    @abstractmethod
+    def _handle_put(self, task: Task, now: float) -> None:
+        pass
+    
 
-    def __init__(
-        self,
-        *,
-        runtime_q: Queue,
-        scheduler_name: str = "axo-scheduler",
-        tasks: List[Task] | None = None,
-        maxsize: int = 100,
-    ) -> None:
+
+    # def __init__(
+    #     self,
+    #     *,
+    #     runtime_q: Queue,
+    #     scheduler_name: str = "axo-scheduler",
+    #     tasks: List[Task] | None = None,
+    #     maxsize: int = 100,
+    # ) -> None:
+        # self.run
+
+
+# ============================================================================
+# Default scheduler used by ActiveXRuntime
+# ============================================================================
+class AxoScheduler(Scheduler):
+    """Concrete scheduler with default parameters suitable for most runtimes."""
+
+    def __init__(self, *, runtime_queue: Queue, tasks: List[Task] | None = None, maxsize:int = 100,scheduler_name:str="axo-scheduler") -> None:
         super().__init__(name=scheduler_name, daemon=True)
+        # super().__init__(
+            # runtime_q      = runtime_queue,
+            # scheduler_name = "axo-scheduler",
+            # tasks          = tasks,
+            # maxsize        = maxsize,
+        # )
+        self.tm = TasksManager()
+        self.scheduler_name = scheduler_name
         self.t1 = T.time()
-        self.runtime_queue: Queue = runtime_q
+        self.runtime_queue: Queue = runtime_queue
         self.q: Queue[Task] = Queue(maxsize=maxsize)
-
+        # self.pending_tasks:List[Task] = []
+        # self.completed_tasks:List[Task] = []
         # Preload tasks (if any) ----------------------------------------
         for t in tasks or []:
-            self.q.put(t)
+            self.schedule(task=t)
+            # self.q.put(t)
+            # self.tm.add_task(task=t)
+            # self
+            # self.pending_tasks.append(t)
 
         self._running = True
         self._heartbeat = 1.0  # seconds between retries
@@ -90,9 +125,15 @@ class Scheduler(ABC, Thread):
     # ------------------------------------------------------------------ #
     # Public API
     # ------------------------------------------------------------------ #
+    # def get_completed_tasks(self):
+        # return self.completed_tasks
+    # def get_pending_tasks(self):
+        # return self.pending_tasks
     def schedule(self, task: Task) -> None:
         """Add a new task to the scheduler queue."""
         self.q.put(task)
+        self.tm.add_task(task=task)
+        # self.pending_tasks.append(task)
 
     def stop(self) -> None:
         """Signal the scheduler thread to exit."""
@@ -129,7 +170,9 @@ class Scheduler(ABC, Thread):
             else:
                 # Unknown op → drop
                 logger.warning("Unknown operation %s (dropping)", task.operation)
-
+                self.tm.remove_task(task.id)
+                # self.pending_tasks = list(filter(lambda x:x.id == task.id, self.pending_tasks))
+    
     # ------------------------------------------------------------------ #
     # Internal helpers
     # ------------------------------------------------------------------ #
@@ -141,6 +184,7 @@ class Scheduler(ABC, Thread):
         if task.waiting_time >= task.max_waiting_time:
             logger.debug(f"SCHEDULER.DROP id={task.id} wt={task.get_formatted_waiting_time()} max_wt={task.get_formatted_max_waiting_time()}")
             self.runtime_queue.put(Task(operation="DROP", metadata={"task_id": task.id}))
+
         else:
             logger.debug(f"SCHEDULER.ENQUEUE id={task.id}")
             self.q.put(task)
@@ -156,25 +200,7 @@ class Scheduler(ABC, Thread):
                     metadata={"task_id": task.id, "path": path},
                 )
             )
+            self.tm.complete_task(task_id=task.id)
         else:
             logger.debug(f"FILE.NOT.READY id={task.id} path={path}")
             self._requeue(task=task, now=now)
-            # # File not ready → retry later
-            # time.sleep(self._heartbeat)
-            # task.waiting_time = now - task.created_at
-            # self.q.put(task)
-
-
-# ============================================================================
-# Default scheduler used by ActiveXRuntime
-# ============================================================================
-class AxoScheduler(Scheduler):
-    """Concrete scheduler with default parameters suitable for most runtimes."""
-
-    def __init__(self, *, runtime_queue: Queue, tasks: List[Task] | None = None) -> None:
-        super().__init__(
-            runtime_q=runtime_queue,
-            scheduler_name="axo-scheduler",
-            tasks=tasks,
-            maxsize=100,
-        )
