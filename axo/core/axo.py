@@ -399,20 +399,20 @@ class Axo(metaclass=AxoMeta):
     # ------------------------------------------------------------------ #
     def to_bytes(self) -> bytes:
         """
-        Serialise *attributes*, *methods*, *class definition* and
+        Serialise *attributes*, and
         *class source code* into a single byte‑buffer:
 
-            [len][attrs]  [len][methods]  [len][class_def]  [len][src]
+            [len][attrs]  [len][src]
         """
         attrs = cp.dumps(self.__dict__)
-        methods = cp.dumps({
-            k: getattr(self, k) for k in dir(self)
-            if callable(getattr(self, k)) and not k.startswith("__")
-        })
-        class_def = cp.dumps(self.__class__)
+        # methods = cp.dumps({
+        #     k: getattr(self, k) for k in dir(self)
+        #     if callable(getattr(self, k)) and not k.startswith("__")
+        # })
+        # class_def = cp.dumps(self.__class__)
         class_code = inspect.getsource(self.__class__).encode("utf-8")  # ✅ ENCODED
 
-        parts = [attrs, methods, class_def, class_code]
+        parts = [attrs,  class_code]
         packed = b""
         for part in parts:
             packed += struct.pack("I", len(part)) + part
@@ -560,8 +560,10 @@ class Axo(metaclass=AxoMeta):
                 idx += length
 
             attrs = cp.loads(parts[0])
-            methods = cp.loads(parts[1])
-            class_code_str = parts[3].decode("utf-8")
+            # methods = cp.loads(parts[1])
+            class_code_str = parts[1].decode("utf-8")
+            print("CLASS", class_code_str)
+            # .decode("utf-8")
 
             # Dynamically execute the class definition
 
@@ -583,18 +585,18 @@ class Axo(metaclass=AxoMeta):
                     rebuilt_class = obj
                     break
 
-            if rebuilt_class is None:
-                return Err(Exception("No valid Axo subclass found in class definition"))
+            # if rebuilt_class is None:
+            #     return Err(Exception("No valid Axo subclass found in class definition"))
 
             obj: Axo = rebuilt_class.__new__(rebuilt_class)
             skip = {"__class__", "__dict__", "__module__", "__weakref__"}
             for k, v in attrs.items():
                 if k not in skip:
                     setattr(obj, k, v)
-            for name, fn in methods.items():
-                if name not in skip:
-                    fn = fn.original if include_original and hasattr(fn, "original") else fn
-                    setattr(obj, name, types.MethodType(fn, obj))
+            # for name, fn in methods.items():
+            #     if name not in skip:
+            #         fn = fn.original if include_original and hasattr(fn, "original") else fn
+            #         setattr(obj, name, types.MethodType(fn, obj))
 
             return Ok(obj)
 

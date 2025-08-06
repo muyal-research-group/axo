@@ -7,6 +7,6 @@ class Dog(Axo):
         self.name = name
 
     @axo_method
-    def bark(self,name: str=""):
+    def bark(self,name: str="",**kwargs):
         return f"{self.name}: Woof Woof to {name}"
     

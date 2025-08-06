@@ -10,3 +10,4 @@ dist/*
 **/publish.sh
 tests/out
 **/*.rar
+.coverage

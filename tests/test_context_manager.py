@@ -146,7 +146,7 @@ async def test_scenario1_full(dem: DistributedEndpointManager):
     #     "B": [[1]*10 for _ in range(10)]
     # }, "Object 6")
     # await benchmark_ao(Object7, list(range(100)), "Object 7")
-    await benchmark_ao(Object8, {"cities": list(range(1000))}, "Object 8")  # Warning: factorial growth
+    await benchmark_ao(Object8, {"cities": list(range(10))}, "Object 8",N=1)  # Warning: factorial growth
 
 @pytest.mark.skip("")
 @pytest.mark.asyncio

@@ -52,55 +52,68 @@ For development and contribution, we recommend using Poetry for environment and 
 For distributed mode you must deploy a storage service and at least one ```axo-endpoint```
 
 ```bash
-chmod +x ./run_storage.sh && chmod +x ./run_endpoint.sh  && ./deploy_storage.sh && deploy_endpoint.sh
+chmod +x ./deploy_storage.sh && chmod +x ./deploy_endpoint.sh  && ./deploy_storage.sh && deploy_endpoint.sh
 ```
 
 ## Getting started 🚀
 
-Following the next steps to run the example a simple calculator.
+This example demonstrates how to build and test a distributed, active-object-based calculator using the Axo framework. It showcases how Axo handles method orchestration in local and distributed contexts using decorated methods and runtime context managers.
+
+### 📦 Key Concepts
+
+1. ```Axo```: **Base class for active objects**
+
+    All active objects must inherit from Axo. This class enables the object to interact with Axo runtimes (local or distributed) and use Axo features like ```persistify()``` or dynamic endpoint binding.
+
+2. ```@axo_method```: **Method decorator**
+
+    This decorator intercepts calls to decorated methods and routes them through the Axo runtime, collecting context like endpoint, bucket ID, key, etc.
+
+    - If the runtime is local, the method executes directly.
+
+    - If the runtime is distributed, the method is remotely dispatched to the appropriate endpoint where the active object lives.
+
+3. ```AxoContextManager```: **Runtime context**
+
+    This context manager sets up the runtime:
+
+    - ```AxoContextManager.local()```: sets up a local runtime (for testing or development)
+
+    - ```AxoContextManager.distributed(...)```: sets up a distributed runtime using DistributedEndpointManager
+
+4. ```DistributedEndpointManager```: **Defines remote endpoints**
+
+    Used to manage Axo endpoints in distributed mode. Each endpoint corresponds to a remote service capable of executing active object methods.
+
+## 📐 Example: Distributed Calculator
+We define a class ```Calculator``` that inherits from ```Axo```. It contains four math operations, each decorated with ```@axo_method```.
 
 ```python
-from axo import Axo,axo_method
-from typing import List
-from axo.contextmanager import ActiveXContextManager
-from axo.endpoint.manager import DistributedEndpointManager
-
-dem = DistributedEndpointManager()
-dem.add_endpoint(
-    endpoint_id="activex-endpoint-0",
-    hostname="localhost",
-    protocol="tcp",
-    req_res_port=16667,
-    pubsub_port=16666
-)
-
-acm = ActiveXContextManager.distributed(
-    endpoint_manager=dem
-)
-
 class Calculator(Axo):
-    def __init__(self):
-      self.records:List[str] =[]
+    @axo_method
+    def sum(self, xs: List[float], **kwargs) -> float:
+        return sum(xs)
 
     @axo_method
-    def add(self,x:int,y:int):
-      res = x+y
-      self.records.append("Add {} + {} = {}".format(x,y,res))
-      return res
+    def substract(self, xs: List[float], **kwargs) -> float:
+        return reduce(lambda x, y: x - y, xs)
 
-# It is very important to call the activex handler
+    @axo_method
+    def divide(self, xs: List[float], **kwargs) -> float:
+        return reduce(lambda x, y: x / y, xs)
 
-
-calc = Calculator()
-# Do some operations
-res = calc.add(10,10) # -> 20
-# Save the object
-calc.persistify()
+    @axo_method
+    def mult(self, xs: List[float], **kwargs) -> float:
+        return reduce(lambda x, y: x * y, xs)
 ```
+All methods accept ```xs: List[float]``` and return a float. The **kwargs are internally injected by the ```@axo_method``` decorator and include Axo-specific routing metadata like ```axo_key```, ```axo_bucket_id```, etc.
 
 
-
-## Examples
+### 🧪 Running the Tests
+Use pytest to run the Calculator tests:
+```bash
+pytest 
+```
 
 <!-- CONTRIBUTING -->
 ## Contributing
@@ -132,7 +145,6 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
- Alejandro Zequeira - [@AlejandroZequeria]() - alejandro.delarosa@cinvestav.mx (Main developer)
 
  Ignacio Castillo - [@NachoCastillo]() - jesus.castillo.b@cinvestav.mx (Software Architect / Design)
 
