@@ -102,7 +102,7 @@ AxoObjectId = Annotated[Optional[str], AfterValidator(_make_id_validator(AXO_ID_
 
 def axo_method(wrapped: Callable[..., R]) -> Callable[..., Result[R, Exception]]:
     @wrapt.decorator
-    def _wrapper(wrapped_func, instance, args, kwargs):
+    def _wrapper(wrapped_func, instance:Axo, args, kwargs):
         try:
             t1 = T.time()
             rt = get_runtime()
@@ -112,8 +112,8 @@ def axo_method(wrapped: Callable[..., R]) -> Callable[..., Result[R, Exception]]
             kwargs.setdefault("axo_endpoint_id", ep.endpoint_id)
             kwargs.setdefault("axo_key", instance.get_axo_key())
             kwargs.setdefault("axo_bucket_id", instance.get_axo_bucket_id())
-            kwargs.setdefault("axo_sink_bucket_id", instance.get_sink_bucket_id())
-            kwargs.setdefault("axo_source_bucket_id", instance.get_source_bucket_id())
+            kwargs.setdefault("axo_sink_bucket_id", instance.get_axo_sink_bucket_id())
+            kwargs.setdefault("axo_source_bucket_id", instance.get_axo_source_bucket_id())
             # is_distributed =  rt.get_is_distributed
             if not rt.is_distributed:
                 kwargs.setdefault("storage", rt.storage_service)
@@ -142,64 +142,6 @@ def axo_method(wrapped: Callable[..., R]) -> Callable[..., Result[R, Exception]]
             return Err(e)
 
     return cast(Callable[..., Result[R, Exception]],_wrapper(wrapped))
-
-
-# def axo_method(func: Callable[..., R]) -> Callable[..., Result[R, Exception]]:
-#     """
-#     Decorator that routes a *method call* through the runtime.
-
-#     *   Collects bucket/key information and injects them into **kwargs**.
-#     *   If the runtime is distributed and the object is still *local*,
-#         it is first *persistified*.
-#     *   Returns a :class:`Result`.
-#     """
-
-#     @wraps(func)
-#     def _wrapper(self: "Axo", *args: Any, **kwargs: Any) -> Result[R, Exception]:
-#         try:
-#             start = T.time()
-#             rt = get_runtime()  # current LocalRuntime or DistributedRuntime
-#             ep = rt.endpoint_manager.get_endpoint(kwargs.get("axo_endpoint_id", "") )
-#             self.set_endpoint_id(ep.endpoint_id)
-
-#             # Inject default kwargs if missing
-#             kwargs.setdefault("axo_endpoint_id", ep.endpoint_id)
-#             kwargs.setdefault("axo_key", self.get_axo_key())
-#             kwargs.setdefault("axo_bucket_id", self.get_axo_bucket_id())
-#             kwargs.setdefault("axo_sink_bucket_id", self.get_sink_bucket_id())
-#             kwargs.setdefault("axo_source_bucket_id", self.get_source_bucket_id())
-#             if not rt.get_is_distributed:
-#                 kwargs.setdefault("storage", rt.storage_service)
-
-#             # Persist local instance if we are about to call a remote endpoint
-#             # print(self._acx_local, rt.is_distributed)
-#             if rt.is_distributed and self._acx_local:
-#                 return Err(Exception("First you must persistify the object."))
-#                 # self.persistify()
-
-#             res = ep.method_execution(
-#                 key=self.get_axo_key(),
-#                 fname=func.__name__,
-#                 ao=self,
-#                 f=func,
-#                 fargs=args,
-#                 fkwargs=kwargs,
-#             )
-#             logger.info(
-#                 {
-#                     "event": "METHOD.EXEC",
-#                     "fname": func.__name__,
-#                     "ok":res.is_ok,
-#                     "response_time": T.time() - start,
-#                 }
-#             )
-#             return res
-#         except Exception as e:
-#             logger.error(f"METHOD.EXEC failed: {e}")
-#             return Err(e)
-
-#     _wrapper.original = func  # type: ignore[attr-defined]
-#     return _wrapper
 
 
 def axo_task(func: Callable[..., R]) -> Callable[..., Result[bool, Exception]]:
