@@ -3,7 +3,7 @@
 </p>
 
 <div align=center>
-<a href="https://test.pypi.org/project/mictlanx/"><img src="https://img.shields.io/badge/build-0.0.1a5-2ea44f?logo=Logo&logoColor=%23000" alt="build - 0.0.1a5"></a>
+<a href="https://test.pypi.org/project/mictlanx/"><img src="https://img.shields.io/badge/build-0.0.1a6-2ea44f?logo=Logo&logoColor=%23000" alt="build - 0.0.1a6"></a>
 </div>
 <div align=center>
 	<h1>Axo: <span style="font-weight:normal;"> High Available Execution Engine</span></h1>

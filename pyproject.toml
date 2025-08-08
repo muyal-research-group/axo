@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "axo"
-version = "0.0.1a5"
+version = "0.0.1a6"
 description = "Axo is an active object system designed to empower users with the ability to effortlessly create and manage highly available objects. ActiveX easily mix storage and processing."
 authors = ["Ignacio Castillo <ignacio.bcastillo@gmail.com>"]
 readme = "README.md"
