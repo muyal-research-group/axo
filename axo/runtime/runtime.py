@@ -67,6 +67,11 @@ class ActiveXRuntime(ABC):
 
     @property
     @abstractmethod
+    def runtime_id(self)->str:
+        ...
+
+    @property
+    @abstractmethod
     def is_distributed(self)->bool:
         ...
     @property

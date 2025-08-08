@@ -46,7 +46,7 @@ class DistributedRuntime(ActiveXRuntime,Thread):
         super().__init__(name=runtime_id, daemon=True)
 
         # identifiers & flags -------------------------------------------
-        self.runtime_id = (
+        self.__runtime_id = (
             runtime_id if len(runtime_id) >= 16 else nanoid(alphabet=_ALPHABET)
         )
 
@@ -68,6 +68,9 @@ class DistributedRuntime(ActiveXRuntime,Thread):
         self.__is_distributed = True
         self.start()
 
+    @property
+    def runtime_id(self):
+        self.__runtime_id
     @property
     def q(self):
         return self.__q

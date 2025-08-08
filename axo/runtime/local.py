@@ -30,6 +30,7 @@ from axo.runtime.runtime import ActiveXRuntime
 from axo.scheduler import AxoScheduler,Scheduler
 from axo.storage.data import StorageService
 from axo.log import get_logger
+from axo.storage.data import LocalStorageService
 from threading import Thread
 from axo.models import Task
 from option import Result,Ok,Err
@@ -63,7 +64,7 @@ class LocalRuntime(ActiveXRuntime,Thread):
 
     def __init__(
         self,
-        storage_service: StorageService,
+        storage_service: StorageService = LocalStorageService(storage_service_id="local_storage"),
         runtime_id: str = "",
         # is_distributed: bool = False,
         maxsize: int = 100,

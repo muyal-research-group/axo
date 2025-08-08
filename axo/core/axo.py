@@ -223,8 +223,8 @@ def axo_task(func: Callable[..., R]) -> Callable[..., Result[bool, Exception]]:
                 "fname": func.__name__,
                 "axo_key": self.get_axo_key(),
                 "axo_bucket_id": self.get_axo_bucket_id(),
-                "sink_bucket_id": self.get_sink_bucket_id(),
-                "source_bucket_id": self.get_source_bucket_id(),
+                "sink_bucket_id": self.get_axo_sink_bucket_id(),
+                "source_bucket_id": self.get_axo_source_bucket_id(),
             }
             ep.task_execution(task_function=func, payload=payload)
             return Ok(True)
@@ -348,7 +348,7 @@ class Axo(metaclass=AxoMeta):
         )
         return self._acx_metadata.axo_sink_bucket_id
 
-    def get_sink_bucket_id(self) -> str:
+    def get_axo_sink_bucket_id(self) -> str:
         return self._acx_metadata.axo_sink_bucket_id or self.set_sink_bucket_id()
 
     # -- source ---------------------------------------------------------
@@ -358,7 +358,7 @@ class Axo(metaclass=AxoMeta):
         )
         return self._acx_metadata.axo_source_bucket_id
 
-    def get_source_bucket_id(self) -> str:
+    def get_axo_source_bucket_id(self) -> str:
         return self._acx_metadata.axo_source_bucket_id or self.set_source_bucket_id()
 
     # -- endpoint -------------------------------------------------------
@@ -404,32 +404,28 @@ class Axo(metaclass=AxoMeta):
 
             [len][attrs]  [len][src]
         """
-        attrs = cp.dumps(self.__dict__)
-        # methods = cp.dumps({
-        #     k: getattr(self, k) for k in dir(self)
-        #     if callable(getattr(self, k)) and not k.startswith("__")
-        # })
-        # class_def = cp.dumps(self.__class__)
-        class_code = inspect.getsource(self.__class__).encode("utf-8")  # ✅ ENCODED
+        # attrs = cp.dumps(self.__dict__)
+        # class_code = inspect.getsource(self.__class__).encode("utf-8")  # ✅ ENCODED
+        attrs,class_code = self.get_raw_parts()
 
-        parts = [attrs,  class_code]
+        parts = [cp.dumps(attrs),  class_code.encode("utf-8")]
         packed = b""
         for part in parts:
             packed += struct.pack("I", len(part)) + part
         return packed
     
-    def  get_raw_parts(self)->Tuple[Dict[str, Any], Dict[str, Any], Type[Axo], str]:
+    def  get_raw_parts(self)->Tuple[Dict[str, Any], str]:
         attrs = self.__dict__
-        print(attrs)
-        methods = {
-            k: getattr(self, k) for k in dir(self)
-            if callable(getattr(self, k)) and not k.startswith("__")
-        }
-        class_def = self.__class__
+        # methods = {
+        #     k: getattr(self, k) for k in dir(self)
+        #     if callable(getattr(self, k)) and not k.startswith("__")
+        # }
+        # class_def = self.__class__
         class_code = inspect.getsource(self.__class__)
         # .encode("utf-8")  # ✅ ENCODED
 
-        return attrs, methods, class_def, class_code
+        return attrs,   class_code
+
         # attrs_b = cp.dumps(self.__dict__)
         # methods_b = cp.dumps(
         #     {
@@ -543,7 +539,7 @@ class Axo(metaclass=AxoMeta):
             return Err(e)
     # -- Deserialisation -----------------------------------------------
     @staticmethod
-    def from_bytes(raw: bytes, include_original: bool = False) -> Result["Axo", Exception]:
+    def from_bytes(raw: bytes) -> Result["Axo", Exception]:
         """
         Re‑create an :class:`Axo` instance from :pydata:`raw`.
 
@@ -562,9 +558,6 @@ class Axo(metaclass=AxoMeta):
             attrs = cp.loads(parts[0])
             # methods = cp.loads(parts[1])
             class_code_str = parts[1].decode("utf-8")
-            print("CLASS", class_code_str)
-            # .decode("utf-8")
-
             # Dynamically execute the class definition
 
             module_name = "__axo_dynamic__"

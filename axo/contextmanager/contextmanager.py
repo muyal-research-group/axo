@@ -15,8 +15,10 @@ class AxoContextManager:
     def __init__(self, runtime:Optional[ActiveXRuntime] = None):
         self.prev_runtime = get_runtime()
         if runtime == None:
+            runtime_id = "local-{}".format(nanoid(alphabet=string.ascii_lowercase+string.digits))
             self.runtime = LocalRuntime(
-                runtime_id="local-{}".format(nanoid(alphabet=string.ascii_lowercase+string.digits))
+                storage_service= LocalStorageService(storage_service_id=f"{runtime_id}_storage"),
+                runtime_id=runtime_id
             )
         else:
             self.runtime = runtime

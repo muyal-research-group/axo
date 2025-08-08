@@ -38,6 +38,8 @@ def dem():
         pubsub_port=16666
     )
     return dem
+
+
 @pytest.mark.skip("")
 def test_local():
     # dem = AxoContextManager.local()
@@ -53,9 +55,13 @@ def test_local():
 @pytest.mark.asyncio
 async def test_distributed(dem:DistributedEndpointManager):
     with AxoContextManager.distributed( endpoint_manager= dem) as cmx:
+        
         c:Calculator = Calculator(axo_endpoint_id = "axo-endpoint-0")
+        
         res = await c.persistify()
         print("RESULT",res)
+        print("BUCKET_ID",c.get_axo_bucket_id())
+        print("KEY",c.get_axo_key())
         assert res.is_ok
         res = c.sum([0,1,2])
         print(res)
@@ -66,3 +72,8 @@ async def test_distributed(dem:DistributedEndpointManager):
         res = c.divide([3,2,1])
         print(res)
 
+@pytest.mark.asyncio
+async def test_get_ao(dem:DistributedEndpointManager):
+    with AxoContextManager.distributed( endpoint_manager= dem) as cmx:
+        ao = await Axo.get_by_key(bucket_id="4x49uwyb36ilu00qsg6uqyrq5x8da46z",key="utpxerpeihgx8udm")
+        print(ao)
