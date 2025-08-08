@@ -43,7 +43,7 @@ class DistributedRuntime(ActiveXRuntime,Thread):
         # is_distributed: bool = False,
         runtime_id: str="",
     ) -> None:
-        super().__init__(name=runtime_id, daemon=True)
+        super().__init__(daemon=True)
 
         # identifiers & flags -------------------------------------------
         self.__runtime_id = (

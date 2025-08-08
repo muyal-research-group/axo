@@ -70,7 +70,8 @@ class LocalRuntime(ActiveXRuntime,Thread):
         maxsize: int = 100,
         q_tick_s:int = 1,
     ) -> None:
-        super().__init__(name=runtime_id, daemon=True)
+        super().__init__(daemon=True)
+        self.__runtime_id = runtime_id
         # Shared task queue ------------------------------------------------
         self.__q: Queue = Queue(maxsize=maxsize)
 
@@ -99,6 +100,9 @@ class LocalRuntime(ActiveXRuntime,Thread):
         #     runtime_id=runtime_id,
         #     is_distributed=is_distributed,
         # )
+    @property
+    def runtime_id(self):
+        return self.__runtime_id
     @property
     def q(self):
         return self.__q
