@@ -24,31 +24,22 @@ from __future__ import annotations
 import inspect
 import sys
 import os
-import re
 import struct
-import string
 import time as T
 import types
-from functools import wraps
 from typing import (
     Any,
-    Callable,
-    ClassVar,
     Dict,
     Generator,
-    List,
-    Optional,
     Tuple,
     Type,
     TypeVar,
-    Annotated,
-    cast
 )
 
 # ─────────────────────────────────────────────────────────────── 3rd‑party ──
 import cloudpickle as cp
 from option import Err, Ok, Result
-
+import humanfriendly as HF
 # ──────────────────────────────────────────────────────────────── project ───
 from axo.utils import serialize_and_yield_chunks
 from axo.log import get_logger
@@ -114,7 +105,7 @@ class Axo(metaclass=AxoMeta):
         try:
             attr = getattr(instance, method_name)
             if callable(attr):
-                return Ok(attr(*args, **kwargs))
+                return attr(*args, **kwargs)
             return Ok(attr)
         except Exception as exc:
             return Err(exc)
@@ -132,7 +123,7 @@ class Axo(metaclass=AxoMeta):
     # -- sink -----------------------------------------------------------
     def set_sink_bucket_id(self, sink_bucket_id: str = "") -> str:
         self._acx_metadata.axo_sink_bucket_id = _generate_id(
-            sink_bucket_id, size=AXO_ID_SIZE * 2
+            sink_bucket_id
         )
         return self._acx_metadata.axo_sink_bucket_id
 
@@ -142,7 +133,7 @@ class Axo(metaclass=AxoMeta):
     # -- source ---------------------------------------------------------
     def set_source_bucket_id(self, source_bucket_id: str = "") -> str:
         self._acx_metadata.axo_source_bucket_id = _generate_id(
-            source_bucket_id, size=AXO_ID_SIZE * 2
+            source_bucket_id, size=AXO_ID_SIZE
         )
         return self._acx_metadata.axo_source_bucket_id
 
@@ -158,10 +149,8 @@ class Axo(metaclass=AxoMeta):
         return eid
 
     def get_endpoint_id(self) -> str:
-        # print()
         e_id = self._acx_metadata.axo_endpoint_id
-        return self.set_endpoint_id() if e_id == None else ""
-        # return self._acx_metadata.axo_endpoint_id  or self.set_endpoint_id()
+        return self.set_endpoint_id(None) if e_id == None else e_id
 
     # ------------------------------------------------------------------ #
     # Construction magic
@@ -185,32 +174,56 @@ class Axo(metaclass=AxoMeta):
     # ------------------------------------------------------------------ #
     # Serialisation helpers
     # ------------------------------------------------------------------ #
-    def to_bytes(self) -> bytes:
+    def to_bytes(self) -> Result[bytes,Exception]:
         """
         Serialise *attributes*, and
         *class source code* into a single byte‑buffer:
 
             [len][attrs]  [len][src]
         """
-        attrs,class_code = self.get_raw_parts()
+        raw_parts_result = self.get_raw_parts()
+        if raw_parts_result.is_err:
+            logger.error({"error":str(raw_parts_result.unwrap_err()),"detail":"Failed to get raw parts"})
+            return Err(raw_parts_result.unwrap_err())
+        
+        attrs,class_code = raw_parts_result.unwrap()
+        
 
         parts = [cp.dumps(attrs),  class_code.encode("utf-8")]
         packed = b""
         for part in parts:
             packed += struct.pack("I", len(part)) + part
-        return packed
+        return Ok(packed)
     
-    def  get_raw_parts(self)->Tuple[Dict[str, Any], str]:
-        attrs = self.__dict__
-        class_code = inspect.getsource(self.__class__)
+    def  get_raw_parts(self)->Result[Tuple[Dict[str, Any], str]]:
+        try:
+            attrs = self.__dict__
+            class_code = inspect.getsource(self.__class__)
 
-        return attrs,   class_code
-
-
+            return Ok((attrs,   class_code))
+        except Exception as e:
+            return Err(e)
+    
     def to_stream(self,chunk_size: str = "1MB") -> Generator[bytes, None, None]:
         """Yield ``self`` as (roughly) *chunk_size* byte blocks."""
-        return serialize_and_yield_chunks(self, chunk_size=chunk_size)
+        try:
+            serialized_data_res = self.to_bytes()
+            if serialized_data_res.is_err:
+                raise Exception(f"Failed to convert AO to bytes: {serialized_data_res.unwrap_err()}")
+            serialized_data = serialized_data_res.unwrap()
 
+            total_size = len(serialized_data)
+            start = 0
+            chunk_size = HF.parse_size(chunk_size)
+            
+            while start < total_size:
+                end = min(start + chunk_size, total_size)
+                yield serialized_data[start:end]
+                start = end
+        except Exception as e:
+            raise e
+        # return serialize_and_yield_chunks(self, chunk_size=chunk_size)
+    
     @staticmethod
     def get_parts(raw_obj: bytes) -> Result[Tuple[Dict[str, Any], Dict[str, Any], Type[Axo], str], Exception]:
         try:
@@ -251,12 +264,13 @@ class Axo(metaclass=AxoMeta):
             
             # Now safely deserialize the rest
             attrs = cp.loads(raw_parts[0])
-            methods = cp.loads(raw_parts[1])
-            class_df = rebuilt_class  # You can also `cp.loads(raw_parts[2])` if needed
+            # methods = cp.loads(raw_parts[1])
+            # class_df = rebuilt_class  # You can also `cp.loads(raw_parts[2])` if needed
 
-            return Ok((attrs, methods, class_df, code_str))
+            return Ok((attrs, code_str))
 
         except Exception as e:
+            logger.error({"error":str(e), "detail":"Failed to get AO parts"})
             return Err(e)
     # -- Deserialisation -----------------------------------------------
     @staticmethod
@@ -316,31 +330,6 @@ class Axo(metaclass=AxoMeta):
 
         except Exception as e:
             return Err(e)       
-        # try:
-        #     parts: list[Any] = []
-        #     idx = 0
-        #     while idx < len(raw):
-        #         length = struct.unpack_from("I", raw, idx)[0]
-        #         idx += 4
-        #         parts.append(cp.loads(raw[idx : idx + length]))
-        #         idx += length
-
-        #     attrs, methods, class_def = parts[:3]
-        #     obj:Axo = class_def.__new__(class_def)
-        #     # Restore state & methods
-        #     skip ={"__class__", "__dict__", "__module__", "__weakref__"} 
-        #     for k, v in attrs.items():
-        #         if k not in skip:
-        #             setattr(obj, k, v)
-        #     for name, fn in methods.items():
-        #         if name in skip:
-        #             continue  
-        #         fn = fn.original if include_original and hasattr(fn, "original") else fn
-        #         setattr(obj, name, types.MethodType(fn, obj))
-
-        #     return Ok(obj)
-        # except Exception as exc:
-        #     return Err(exc)
 
     # ------------------------------------------------------------------ #
     # Persistence
@@ -368,4 +357,8 @@ class Axo(metaclass=AxoMeta):
     # Convenience: fetch by key/bucket
     @staticmethod
     async def get_by_key(key: str, *, bucket_id: str = "") -> Result["Axo", Exception]:
-        return await get_runtime().get_active_object(key=key, bucket_id=bucket_id)
+        rt = get_runtime()
+        if rt is None:
+            logger.error({"event":"FAILED.NO.RUNTIME"})
+            return Err(Exception("No runtime is running."))
+        return await rt.get_active_object(key=key, bucket_id=bucket_id)

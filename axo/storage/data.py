@@ -234,7 +234,6 @@ class LocalStorageService(StorageService):
             logger.debug("PUT.DATA %s %.3fs", path, time.time() - start)
             self.metadata.setdefault(bucket_id, {})
             self.metadata[bucket_id][key] = metadata
-            print("BUICKET",self.metadata)
             return Ok(path)
         if os.path.exists(path):
             if checksum == current_checksum:

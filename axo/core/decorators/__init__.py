@@ -44,7 +44,7 @@ from axo.storage.data import LocalStorageService
 # 
 from axo.runtime.local import LocalRuntime
 from axo.runtime import set_runtime,get_runtime
-# from axo.core.axo import Axo
+from axo.protocols import AxoLike
 
 logger = get_logger(name=__name__)
 R = TypeVar("R")  # generic return type for Axo.call
@@ -61,13 +61,15 @@ def _make_local_runtime() -> LocalRuntime:
 
 def axo_method(wrapped: Callable[..., R]) -> Callable[..., Result[R, Exception]]:
     @wrapt.decorator
-    def _wrapper(wrapped_func, instance:Any, args, kwargs):
+    def _wrapper(wrapped_func, instance:AxoLike, args, kwargs):
         try:
             t1 = T.time()
             rt = get_runtime()
             if rt is None:
                 logger.warning({"event":"RUNTIME.NOT.STARTED", "mode":"LOCAL"})
                 set_runtime(_make_local_runtime())
+                rt = get_runtime()
+
 
 
             ep = rt.endpoint_manager.get_endpoint(kwargs.get("axo_endpoint_id", "") )

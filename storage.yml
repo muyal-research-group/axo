@@ -49,7 +49,7 @@ services:
       - ${MICTLANX_ROUTER_PORT-60666}:${MICTLANX_ROUTER_PORT-60666}
     volumes:
       - axo-storage-router-0_logs:/log
-      - ./peers.json:/app/peers.json
+      # - ./peers.json:/app/peers.json
       - ./pems:/pems:ro
     networks:
       - axo-net

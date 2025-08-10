@@ -127,7 +127,7 @@ class LocalRuntime(ActiveXRuntime,Thread):
     def is_running(self)->bool:
         return self.__is_running  
     def get_active_object(self, *, bucket_id, key):
-        return self.storage_service.get()
+        return self.storage_service.get( key=key, bucket_id=bucket_id)
         # return super().get_active_object(bucket_id=bucket_id, key=key)
 
     async def persistify(self, instance:Axo, *, bucket_id = "axo", key = None)->Result[str,Exception]:
@@ -150,7 +150,11 @@ class LocalRuntime(ActiveXRuntime,Thread):
                 "service_time":T.time() - t1
             })
             # 2) class definition
-            attrs,class_code = instance.get_raw_parts()
+            raw_parts_res = instance.get_raw_parts()
+            if raw_parts_res.is_err:
+                return Err(raw_parts_res.unwrap_err())
+            
+            attrs,class_code = raw_parts_res.unwrap()
 
             t1 = T.time()
             attrs_put_result = await self.storage_service.put(

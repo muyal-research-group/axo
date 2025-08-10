@@ -8,15 +8,20 @@ from axo.endpoint.manager import DistributedEndpointManager
 from axo.storage.data import StorageService,LocalStorageService
 # 
 from axo.scheduler import AxoScheduler
+#
+from axo.log import get_logger
 
 from option import Option,NONE
 from typing import Optional,Union
 from nanoid import generate as nanoid
 from queue import Queue
 import string
+import time as T
+logger = get_logger(name= __name__)
 class AxoContextManager:
     is_running = False
     def __init__(self, runtime:Optional[ActiveXRuntime] = None):
+        self.start_time = T.time()
         self.prev_runtime = None
         self.runtime = runtime
         # self.prev_runtime = get_runtime()
@@ -62,6 +67,14 @@ class AxoContextManager:
         )
         
     def stop(self):
+        # print("SOTP", self.is_running,self.prev_runtime)
+        get_mode = lambda x: "DISTRIBUTED" if x  else "LOCAL"
+        logger.debug({
+            "event":"CONTEXT.MANAGER.STOP",
+            "mode":get_mode(self.runtime.is_distributed) if  self.runtime else "NONE",
+            "is_running":int(self.is_running),
+            "service_time": T.time() - self.start_time
+        })
         if not self.is_running:
             return
         self.runtime.stop()
@@ -88,5 +101,5 @@ class AxoContextManager:
         # returning False will re-raise any exception; True would swallow it
         return False
 
-    def __del__(self):
-        self.stop()
+    # def __del__(self):
+        # self.stop()
