@@ -64,7 +64,7 @@ class DistributedRuntime(ActiveXRuntime,Thread):
         self.import_manager = DefaultImportManager()
 
         # thread ctl -----------------------------------------------------
-        self.__running = True
+        self.__is_running = True
         self.__is_distributed = True
         self.start()
 
@@ -91,7 +91,7 @@ class DistributedRuntime(ActiveXRuntime,Thread):
         return self.__inmemory_objects
     @property
     def is_running(self)->bool:
-        return self.__running  
+        return self.__is_running  
 
 
     # ------------------------------------------------------------------ #
@@ -111,7 +111,6 @@ class DistributedRuntime(ActiveXRuntime,Thread):
             t1  = T.time()
             key = key or instance.get_axo_key()
             endpoint:EndpointX = self.endpoint_manager.get_endpoint(instance.get_endpoint_id())
-            print("ENDPOINT", endpoint)
             meta_res:Result[str, Exception] = endpoint.put(key=key, value=instance._acx_metadata)
             if meta_res.is_err:
                 logger.error({

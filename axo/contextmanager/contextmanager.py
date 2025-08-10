@@ -24,17 +24,6 @@ class AxoContextManager:
         self.start_time = T.time()
         self.prev_runtime = None
         self.runtime = runtime
-        # self.prev_runtime = get_runtime()
-        # if runtime == None:
-        #     runtime_id = "local-{}".format(nanoid(alphabet=string.ascii_lowercase+string.digits))
-        #     self.runtime = LocalRuntime(
-        #         storage_service= LocalStorageService(storage_service_id=f"{runtime_id}_storage"),
-        #         runtime_id=runtime_id
-        #     )
-        # else:
-        #     self.runtime = runtime
-        # set_runtime(self.runtime)
-        # self.is_running = True
 
     @staticmethod
     def local()->'AxoContextManager':
@@ -67,7 +56,6 @@ class AxoContextManager:
         )
         
     def stop(self):
-        # print("SOTP", self.is_running,self.prev_runtime)
         get_mode = lambda x: "DISTRIBUTED" if x  else "LOCAL"
         logger.debug({
             "event":"CONTEXT.MANAGER.STOP",
@@ -77,9 +65,10 @@ class AxoContextManager:
         })
         if not self.is_running:
             return
-        self.runtime.stop()
-        set_runtime(self.prev_runtime)
-        self.is_running=False
+        if self.runtime:
+            self.runtime.stop()
+            set_runtime(self.prev_runtime)
+            self.is_running=False
 
     # ---------------------------------------------------------------- #
     # Context‐manager protocol
@@ -93,6 +82,7 @@ class AxoContextManager:
                 runtime_id=f"local-{suffix}",
                 storage_service=LocalStorageService(storage_service_id=f"local-storage-{suffix}")
             )
+
         set_runtime(self.runtime)
         return self.runtime   # or `return self` if you prefer `as manager`
 
@@ -101,5 +91,3 @@ class AxoContextManager:
         # returning False will re-raise any exception; True would swallow it
         return False
 
-    # def __del__(self):
-        # self.stop()

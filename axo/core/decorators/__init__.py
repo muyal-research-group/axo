@@ -91,7 +91,6 @@ def axo_method(wrapped: Callable[..., R]) -> Callable[..., Result[R, Exception]]
                 key     = instance.get_axo_key(),
                 fname   = fname,
                 ao      = instance,
-                f       = wrapped_func,
                 fargs   = args,
                 fkwargs = kwargs,
             )

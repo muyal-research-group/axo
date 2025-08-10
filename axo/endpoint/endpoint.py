@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 import logging
-import random
+import types
 import time
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict,  TypeVar
@@ -101,7 +101,7 @@ class EndpointX(ABC):
         key: str,
         fname: str,
         ao: Axo,
-        f: GenericFunction | None = None,
+        # f: GenericFunction | None = None,
         fargs: list[Any] | None = None,
         fkwargs: dict[str, Any] | None = None,
     ) -> Result[Any, Exception]: ...
@@ -148,17 +148,25 @@ class LocalEndpoint(EndpointX):
         key: str,
         fname: str,
         ao: Axo,
-        f: GenericFunction | None = None,
+        # f: GenericFunction | None = None,
         fargs: list[Any] | None = None,
         fkwargs: dict[str, Any] | None = None,
     ) -> Result[Any, Exception]:
         try:
             fargs = fargs or []
             fkwargs = fkwargs or {}
-            print(fargs)
-            # print(f(ao,1,1))
-            # return Ok(f(ao, *fargs, **fkwargs)) if f else Err(Exception("No function"))
-            return Ok(f(*fargs, **fkwargs)) if f else Err(Exception("No function"))
+            if hasattr(ao, fname):
+                attr = getattr(ao, fname)
+                if isinstance(attr, types.MethodType):
+                    return Ok(attr(*fargs, **fkwargs))
+                else:
+                    e_msg = f"{fname} exists but is not a bound method. "
+                    logger.error({"event":"METOD.NOT.CALLABLE","detail":e_msg})
+                    return Err(Exception(e_msg))
+            else:
+                e_msg = f"AO[{ao.get_axo_key()}] does not have a method {fname}"
+                logger.error({"event":"METHOD.NOT.FOUND","detail":e_msg})
+                return Err(Exception(e_msg))
         except Exception as exc:
             return Err(exc)
 
@@ -320,7 +328,7 @@ class DistributedEndpoint(EndpointX):
         key: str,
         fname: str,
         ao: Axo,
-        f: GenericFunction | None = None,
+        # f: GenericFunction | None = None,
         fargs: list[Any] | None = None,
         fkwargs: dict[str, Any] | None = None,
     ) -> Result[Any, Exception]:

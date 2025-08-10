@@ -221,4 +221,4 @@ class LocalRuntime(ActiveXRuntime,Thread):
     def stop(self) -> None:
         """Gracefully stop the background thread."""
         logger.debug("Stopping LocalRuntime %s …", self.name)
-        self._running = False
+        self.__is_running = False
