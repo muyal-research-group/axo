@@ -19,29 +19,28 @@ All public APIs return :pyclass:`option.Result` to make error handling explicit.
 
 from __future__ import annotations
 
-import asyncio
-import logging
 import types
 import os
 import string
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterator, List, Tuple, TypeVar,Callable,Awaitable
-import functools
-import inspect
+from typing import Any, Dict, Iterator, List, Tuple, TypeVar,TYPE_CHECKING
+# 
 import cloudpickle as cp
 import humanfriendly as hf
 from nanoid import generate as nanoid
 from option import Err, Ok, Result
+from xolo.utils.utils import Utils as XoloUtils
+
+# MictlanX 
+# import mictlanx.v4.interfaces as InterfaceX
+from mictlanx.utils import Chunks
 from mictlanx.utils.index import Utils
 from mictlanx.v4.asyncx import AsyncClient
-from mictlanx.v4.client import Client
 from mictlanx.v4.interfaces import Metadata
-import mictlanx.v4.interfaces as InterfaceX
-from mictlanx.utils import Chunks
-from xolo.utils.utils import Utils as XoloUtils
-from axo import Axo,axo_method
-from axo.storage.metadata import MetadataX
+# 
+if TYPE_CHECKING:
+    from axo.core.axo import Axo,axo_method
 from axo.log import get_logger
 from axo.utils.decorators import guard_if_failed
 # --------------------------------------------------------------------------- #
@@ -339,7 +338,7 @@ class MictlanXStorageService(StorageService):
         protocol: str = "https",
         max_workers: int = 4,
         log_path: str = "./log",
-        client: Client | None = None,
+        client: AsyncClient | None = None,
     ) -> None:
         super().__init__(storage_service_id="MictlanX")
 
@@ -537,6 +536,6 @@ class MictlanXStorageService(StorageService):
 
     # Factory helper ----------------------------------------------------
     @staticmethod
-    def from_client(client: Client) -> "MictlanXStorageService":
+    def from_client(client: AsyncClient) -> "MictlanXStorageService":
         """Create service from an existing *synchronous* MictlanX client."""
         return MictlanXStorageService(client=client)

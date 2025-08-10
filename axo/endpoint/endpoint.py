@@ -28,10 +28,11 @@ import cloudpickle as cp
 import humanfriendly as hf
 import zmq
 
-from axo import Axo
 from axo.storage.metadata import MetadataX
 from option import Err, Ok, Result
-
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from axo.core.axo import Axo  # type-only; not executed at runtime
 # ──────────────────────────────────────────────────────────────────────────────
 # Typing aliases
 # ──────────────────────────────────────────────────────────────────────────────

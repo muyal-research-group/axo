@@ -1,10 +1,15 @@
 from nanoid import generate as nanoid
 import string
 import humanfriendly as HF
-from typing import Dict
+from typing import Dict,Annotated,Optional
 import time as T
 from enum import Enum,auto
-ALPHABET = string.digits+string.ascii_lowercase
+from pydantic import AfterValidator
+# 
+from axo.helpers import _make_id_validator,_generate_id
+from axo.environment import AXO_ID_SIZE,ALPHABET
+
+AxoObjectId = Annotated[Optional[str], AfterValidator(_make_id_validator(AXO_ID_SIZE))]
 
 class TaskStatus(Enum):
     # CREATED = auto()
@@ -22,7 +27,7 @@ class Task:
         max_waiting_time:str = "1m",
         metadata:Dict[str,str]={}
     ) -> None:
-        self.id = nanoid(alphabet=ALPHABET)
+        self.id = _generate_id()
         self.created_at = T.time()
         if executed_at < self.created_at :
             self.executes_at = self.created_at

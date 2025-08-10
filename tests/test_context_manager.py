@@ -48,21 +48,23 @@ class Calc(Axo):
 async def test_local_cm():
     lcm = AxoContextManager.local()
     assert not lcm.runtime.is_distributed
+    
 @pytest.mark.asyncio
 async def test_local_cm_none_runtime():
     lcm = AxoContextManager(runtime= None)
-    assert not lcm.runtime.is_distributed
+    assert not lcm.runtime 
+
 @pytest.mark.asyncio
 async def test_local_cm_local_runtime():
-    lcm = AxoContextManager(runtime= LocalRuntime())
-    assert not lcm.runtime.is_distributed
-    assert isinstance(get_runtime(),LocalRuntime)
+    with AxoContextManager.local() as lrt:
+        assert not lrt.is_distributed
+        current_rt = get_runtime()
+        assert isinstance(current_rt,LocalRuntime)
+    
 @pytest.mark.asyncio
 async def test_distributed_cm():
-    lcm = AxoContextManager.distributed(
-        endpoint_manager = DistributedEndpointManager() 
-    )
-    assert lcm.runtime.is_distributed
+    with AxoContextManager.distributed(endpoint_manager=DistributedEndpointManager()) as drt:
+        assert drt.is_distributed
 
 # @pytest.mark.asyncio
 # async def test_local_cm():

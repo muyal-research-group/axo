@@ -1,5 +1,5 @@
 from abc import ABC,abstractmethod
-from axo import MetadataX
+from axo.core.models import MetadataX
 import logging
 import json as J
 import time as T

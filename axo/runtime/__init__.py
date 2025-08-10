@@ -46,6 +46,7 @@ current_session: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 # another ContextVar just like `current_session`.
 # ──────────────────────────────────────────────────────────────────────────────
 _current_runtime: Union["LocalRuntime", "DistributedRuntime", None] = None
+_runtime_cv = contextvars.ContextVar("axo_runtime", default=None)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -59,7 +60,7 @@ def get_runtime() -> Union["LocalRuntime", "DistributedRuntime", None]:
     • `DistributedRuntime` → remote or serverless execution
     • `None` → runtime not configured yet (startup phase)
     """
-    return _current_runtime
+    return _runtime_cv.get()
 
 
 def set_runtime(runtime: Union["LocalRuntime", "DistributedRuntime"]) -> None:
@@ -80,5 +81,6 @@ def set_runtime(runtime: Union["LocalRuntime", "DistributedRuntime"]) -> None:
     runtime : LocalRuntime | DistributedRuntime
         The backend that will handle task scheduling, storage, etc.
     """
-    global _current_runtime
-    _current_runtime = runtime
+    _runtime_cv.set(runtime)
+    # global _current_runtime
+    # _current_runtime = runtime

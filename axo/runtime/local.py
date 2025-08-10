@@ -17,24 +17,25 @@ Because everything runs in‑process, no network calls are performed, making
 """
 
 from __future__ import annotations
-
-from queue import Queue
+from typing import TYPE_CHECKING
+from weakref import WeakKeyDictionary
 import time as T
+from queue import Queue
+from threading import Thread
+# 
 import cloudpickle as CP
+from option import Result,Ok,Err
+# 
 
-from option import NONE, Option
-from axo import Axo
+if TYPE_CHECKING:
+    from axo.core.axo import Axo  # only for type hints; not executed at runtime
 from axo.endpoint.manager import LocalEndpointManager,EndpointManagerP
 from axo.endpoint.endpoint import EndpointX
 from axo.runtime.runtime import ActiveXRuntime
 from axo.scheduler import AxoScheduler,Scheduler
-from axo.storage.data import StorageService
+from axo.storage.data import StorageService,LocalStorageService
 from axo.log import get_logger
-from axo.storage.data import LocalStorageService
-from threading import Thread
 from axo.models import Task
-from option import Result,Ok,Err
-from weakref import WeakKeyDictionary
 # --------------------------------------------------------------------------- #
 # Logger (module‑local)
 # --------------------------------------------------------------------------- #

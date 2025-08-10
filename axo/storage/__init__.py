@@ -1,2 +1,2 @@
-from .data import MictlanXStorageService,LocalStorageService,StorageService
-from .metadata import MetadataService,ActiveXMetadataService,LocalMetadataService
+from axo.storage.data import MictlanXStorageService,LocalStorageService,StorageService
+from axo.storage.metadata import MetadataService,ActiveXMetadataService,LocalMetadataService

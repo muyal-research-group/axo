@@ -47,187 +47,33 @@ from typing import (
 
 # ─────────────────────────────────────────────────────────────── 3rd‑party ──
 import cloudpickle as cp
-from nanoid import generate as nanoid
 from option import Err, Ok, Result
-from pydantic import BaseModel, Field
-from pydantic.functional_validators import AfterValidator
-import wrapt
 
 # ──────────────────────────────────────────────────────────────── project ───
-from axo.runtime import get_runtime
 from axo.utils import serialize_and_yield_chunks
 from axo.log import get_logger
-# from axo.endpoint.endpoint import EndpointX
-
+from axo.core.decorators import axo_method
+from axo.runtime import get_runtime
+from axo.core.models import MetadataX
+from axo.helpers import _generate_id
+from axo.environment import AXO_ID_SIZE
 # ───────────────────────────────────────────────────────────────── constants ─
-ALPHABET = string.ascii_lowercase + string.digits
-AXO_ID_SIZE = int(os.getenv("AXO_ID_SIZE", "16"))
 AXO_DEBUG = bool(int(os.getenv("AXO_DEBUG", "1")))
 AXO_PRODUCTION_LOG_ENABLE = bool(int(os.getenv("AXO_PRODUCTION_LOG_ENABLE", "0")))
 AXO_LOG_PATH = os.getenv("AXO_LOG_PATH", "/axo/log")
 AXO_PROPERTY_PREFIX = "_acx_property_"
 
-R = TypeVar("R")  # generic return type for Axo.call
 
 # ─────────────────────────────────────────────────────── logger configuration
 logger = get_logger(name=__name__)
 
+R = TypeVar("R")  # generic return type for Axo.call
 # =========================================================================== #
 # Small helpers
 # =========================================================================== #
-def _generate_id(val: str | None, *, size: int = AXO_ID_SIZE) -> str:
-    """Return a valid identifier containing only a‑z 0‑9 _ ."""
-    if not val:
-        return nanoid(alphabet=ALPHABET, size=size)
-    return re.sub(r"[^a-z0-9_]", "", val)
 
 
-def _make_id_validator(size: int) -> Callable[[str | None], str]:
-    """Factory that produces a pydantic *AfterValidator* for ID fields."""
 
-    def _validator(v: str | None) -> str:
-        return _generate_id(v, size=size)
-
-    return _validator
-
-
-# pydantic *Annotated* alias for object keys
-AxoObjectId = Annotated[Optional[str], AfterValidator(_make_id_validator(AXO_ID_SIZE))]
-
-
-# =========================================================================== #
-# Decorators
-# =========================================================================== #
-# @wrapt.decorator
-
-def axo_method(wrapped: Callable[..., R]) -> Callable[..., Result[R, Exception]]:
-    @wrapt.decorator
-    def _wrapper(wrapped_func, instance:Axo, args, kwargs):
-        try:
-            t1 = T.time()
-            rt = get_runtime()
-            ep = rt.endpoint_manager.get_endpoint(kwargs.get("axo_endpoint_id", "") )
-            instance.set_endpoint_id(ep.endpoint_id)
-
-            kwargs.setdefault("axo_endpoint_id", ep.endpoint_id)
-            kwargs.setdefault("axo_key", instance.get_axo_key())
-            kwargs.setdefault("axo_bucket_id", instance.get_axo_bucket_id())
-            kwargs.setdefault("axo_sink_bucket_id", instance.get_axo_sink_bucket_id())
-            kwargs.setdefault("axo_source_bucket_id", instance.get_axo_source_bucket_id())
-            # is_distributed =  rt.get_is_distributed
-            if not rt.is_distributed:
-                kwargs.setdefault("storage", rt.storage_service)
-            
-            if rt.is_distributed and instance._acx_local:
-                return Err(Exception("First you must persistify the object."))
-            fname = wrapped_func.__name__
-            res = ep.method_execution(
-                key     = instance.get_axo_key(),
-                fname   = fname,
-                ao      = instance,
-                f       = wrapped_func,
-                fargs   = args,
-                fkwargs = kwargs,
-            )
-            logger.info({
-                "event": "METHOD.EXEC",
-                "mode":"DISTRIBUTED" if rt.is_distributed else "LOCAL",
-                "fname": fname,
-                "ok": res.is_ok,
-                "response_time": T.time() - t1,  # update this properly
-            })
-            return res
-        except Exception as e:
-            logger.error(f"METHOD.EXEC failed: {e}")
-            return Err(e)
-
-    return cast(Callable[..., Result[R, Exception]],_wrapper(wrapped))
-
-
-def axo_task(func: Callable[..., R]) -> Callable[..., Result[bool, Exception]]:
-    """
-    Decorator that *enqueues* a task to be executed by the runtime
-    instead of running synchronously.
-    """
-
-    @wraps(func)
-    def _wrapper(self: "Axo", *args: Any, **kwargs: Any) -> Result[bool, Exception]:
-        try:
-            rt = get_runtime()
-            ep = rt.endpoint_manager.get_endpoint(kwargs.get("endpoint_id", ""))
-            self.set_endpoint_id(ep.endpoint_id)
-
-            # Persist object first if needed
-            if rt.is_distributed and self._acx_local:
-                self.persistify().unwrap()  # raise on failure
-
-            payload = {
-                "fname": func.__name__,
-                "axo_key": self.get_axo_key(),
-                "axo_bucket_id": self.get_axo_bucket_id(),
-                "sink_bucket_id": self.get_axo_sink_bucket_id(),
-                "source_bucket_id": self.get_axo_source_bucket_id(),
-            }
-            ep.task_execution(task_function=func, payload=payload)
-            return Ok(True)
-        except Exception as exc:
-            logger.exception("TASK.EXEC failed")
-            return Err(exc)
-
-    _wrapper.original = func  # type: ignore[attr-defined]
-    return _wrapper
-
-
-# =========================================================================== #
-# Metadata (pydantic model)
-# =========================================================================== #
-class MetadataX(BaseModel):
-    """Serializable metadata stored alongside every active object."""
-
-    # Class‑level defaults (paths can be overridden via env‑vars)
-    path: ClassVar[str] = os.getenv("ACTIVE_LOCAL_PATH", "/axo/data")
-    source_path: ClassVar[str] = os.getenv("AXO_SOURCE_PATH", "/axo/source")
-    sink_path: ClassVar[str] = os.getenv("AXO_SINK_PATH", "/axo/sink")
-
-    # Stored fields
-    axo_pivot_storage_node: Optional[str] = ""
-    axo_is_read_only: bool = False
-
-    axo_key: AxoObjectId = ""
-    axo_module: str
-    axo_name: str
-    axo_class_name: str
-    axo_version: str = "v0"
-
-    axo_bucket_id: str = ""
-    axo_source_bucket_id: str = ""
-    axo_sink_bucket_id: str = ""
-
-    axo_endpoint_id: str = ""
-    axo_dependencies: List[str] = Field(default_factory=list)
-
-    # ------------------------------------------------------------------ #
-    # pydantic hook
-    # ------------------------------------------------------------------ #
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-        # Fill IDs if empty
-        self.axo_key = _generate_id(self.axo_key)
-        self.axo_bucket_id = _generate_id(self.axo_bucket_id, size=AXO_ID_SIZE * 2)
-        self.axo_sink_bucket_id = _generate_id(self.axo_sink_bucket_id, size=AXO_ID_SIZE * 2)
-        self.axo_source_bucket_id = _generate_id(
-            self.axo_source_bucket_id, size=AXO_ID_SIZE * 2
-        )
-
-    # ------------------------------------------------------------------ #
-    # Helpers
-    # ------------------------------------------------------------------ #
-    def to_json_with_string_values(self) -> Dict[str, str]:
-        """Return ``dict`` with every value stringified (for tags)."""
-        out: Dict[str, str] = {}
-        for k, v in self.model_dump().items():
-            out[k] = ";".join(v) if isinstance(v, list) else str(v)
-        return out
 
 
 # =========================================================================== #

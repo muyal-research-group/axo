@@ -2,28 +2,34 @@ from axo.runtime import set_runtime,get_runtime
 from axo.runtime.local import LocalRuntime
 from axo.runtime.distributed import DistributedRuntime
 from axo.runtime.runtime import ActiveXRuntime
+# 
 from axo.endpoint.manager import DistributedEndpointManager
+# 
 from axo.storage.data import StorageService,LocalStorageService
+# 
 from axo.scheduler import AxoScheduler
+
 from option import Option,NONE
-from typing import Optional
+from typing import Optional,Union
 from nanoid import generate as nanoid
 from queue import Queue
 import string
 class AxoContextManager:
     is_running = False
     def __init__(self, runtime:Optional[ActiveXRuntime] = None):
-        self.prev_runtime = get_runtime()
-        if runtime == None:
-            runtime_id = "local-{}".format(nanoid(alphabet=string.ascii_lowercase+string.digits))
-            self.runtime = LocalRuntime(
-                storage_service= LocalStorageService(storage_service_id=f"{runtime_id}_storage"),
-                runtime_id=runtime_id
-            )
-        else:
-            self.runtime = runtime
-        set_runtime(self.runtime)
-        self.is_running = True
+        self.prev_runtime = None
+        self.runtime = runtime
+        # self.prev_runtime = get_runtime()
+        # if runtime == None:
+        #     runtime_id = "local-{}".format(nanoid(alphabet=string.ascii_lowercase+string.digits))
+        #     self.runtime = LocalRuntime(
+        #         storage_service= LocalStorageService(storage_service_id=f"{runtime_id}_storage"),
+        #         runtime_id=runtime_id
+        #     )
+        # else:
+        #     self.runtime = runtime
+        # set_runtime(self.runtime)
+        # self.is_running = True
 
     @staticmethod
     def local()->'AxoContextManager':
@@ -65,8 +71,17 @@ class AxoContextManager:
     # ---------------------------------------------------------------- #
     # Context‐manager protocol
     # ---------------------------------------------------------------- #
-    def __enter__(self):
-        return self
+    def __enter__(self)->Union[LocalRuntime,DistributedRuntime]:
+        self.prev_runtime = get_runtime()
+        # runtime is built by the factories below; if None, build a default local one
+        if self.runtime is None:
+            suffix = nanoid(alphabet=string.ascii_lowercase + string.digits)
+            self.runtime = LocalRuntime(
+                runtime_id=f"local-{suffix}",
+                storage_service=LocalStorageService(storage_service_id=f"local-storage-{suffix}")
+            )
+        set_runtime(self.runtime)
+        return self.runtime   # or `return self` if you prefer `as manager`
 
     def __exit__(self, exc_type, exc, tb):
         self.stop()

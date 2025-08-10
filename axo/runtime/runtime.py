@@ -20,22 +20,22 @@ import string
 import time
 from abc import ABC, abstractmethod
 from queue import Queue
-from typing import Optional
-import time as T
+from typing import Optional,TYPE_CHECKING
+from weakref import WeakKeyDictionary
 
 # ─────────────────────────────────────────────────────────────── 3rd‑party ──
-import cloudpickle as cp
 from nanoid import generate as nanoid
 from option import Err, Result,Ok
 
 # ──────────────────────────────────────────────────────────────── project ───
 from axo.scheduler import Scheduler, Task
-from axo.storage.data import Axo, StorageService
-from axo.types import EndpointManagerP
-from axo.endpoint.endpoint import EndpointX
-from axo.log import get_logger
+from axo.storage.data import StorageService
 
-from weakref import WeakKeyDictionary
+from axo.types import EndpointManagerP
+from axo.log import get_logger
+if TYPE_CHECKING:
+    from axo.core.axo import Axo
+
 #     LocalEndpointManager,
 #     DistributedEndpointManager,EndpointX
 # )  # only for typing / re‑export convenience
