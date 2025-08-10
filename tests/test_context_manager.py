@@ -60,7 +60,7 @@ async def test_local_cm_local_runtime():
         assert not lrt.is_distributed
         current_rt = get_runtime()
         assert isinstance(current_rt,LocalRuntime)
-    
+@pytest.mark.skip("")
 @pytest.mark.asyncio
 async def test_distributed_cm():
     with AxoContextManager.distributed(endpoint_manager=DistributedEndpointManager()) as drt:

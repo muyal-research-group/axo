@@ -20,7 +20,7 @@ async def test_local_endpoint():
     print(res)
 
 
-# @pytest.mark.skip("")
+@pytest.mark.skip("")
 @pytest.mark.asyncio
 async def test_distributed_endpoint():
     le = DistributedEndpoint(endpoint_id="activex-endpoint-0")

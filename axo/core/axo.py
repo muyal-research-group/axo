@@ -192,8 +192,6 @@ class Axo(metaclass=AxoMeta):
 
             [len][attrs]  [len][src]
         """
-        # attrs = cp.dumps(self.__dict__)
-        # class_code = inspect.getsource(self.__class__).encode("utf-8")  # ✅ ENCODED
         attrs,class_code = self.get_raw_parts()
 
         parts = [cp.dumps(attrs),  class_code.encode("utf-8")]
@@ -204,80 +202,15 @@ class Axo(metaclass=AxoMeta):
     
     def  get_raw_parts(self)->Tuple[Dict[str, Any], str]:
         attrs = self.__dict__
-        # methods = {
-        #     k: getattr(self, k) for k in dir(self)
-        #     if callable(getattr(self, k)) and not k.startswith("__")
-        # }
-        # class_def = self.__class__
         class_code = inspect.getsource(self.__class__)
-        # .encode("utf-8")  # ✅ ENCODED
 
         return attrs,   class_code
 
-        # attrs_b = cp.dumps(self.__dict__)
-        # methods_b = cp.dumps(
-        #     {
-        #         n: getattr(self.__class__, n) 
-        #         for n in dir(self.__class__) 
-        #         if callable(getattr(self.__class__, n))
-        #     }
-        # )
-        # class_def_b = cp.dumps(self.__class__)
-        # src_b = cp.dumps(inspect.getsource(self.__class__).encode())
-
-        # out = b""
-        # for part in (attrs_b, methods_b, class_def_b, src_b):
-        #     out += struct.pack("I", len(part)) + part
-        # return out
 
     def to_stream(self,chunk_size: str = "1MB") -> Generator[bytes, None, None]:
         """Yield ``self`` as (roughly) *chunk_size* byte blocks."""
         return serialize_and_yield_chunks(self, chunk_size=chunk_size)
 
-    # @staticmethod
-    # def get_parts(raw_obj: bytes) -> Result[Tuple[Dict[str, Any], Dict[str, Any], Type[Axo], str], Exception]:
-    #     try:
-    #         index = 0
-    #         unpacked_data = []
-
-    #         # First, read lengths and raw segments
-    #         raw_parts = []
-    #         while index < len(raw_obj):
-    #             length = struct.unpack_from('I', raw_obj, index)[0]
-    #             index += 4
-    #             data = raw_obj[index:index+length]
-    #             index += length
-    #             raw_parts.append(data)
-
-    #         # The last part is the source code of the class (in bytes)
-    #         class_code_bytes = raw_parts[-1]
-    #         code_str = class_code_bytes.decode("utf-8")
-
-    #         # Dynamically evaluate the class code into a temporary module
-    #         module_name = "__axo_dynamic__"
-    #         mod = types.ModuleType(module_name)
-    #         sys.modules[module_name] = mod
-    #         exec(code_str, mod.__dict__)
-
-    #         # Find the class that inherits from Axo
-    #         rebuilt_class = None
-    #         for obj in mod.__dict__.values():
-    #             if isinstance(obj, type) and issubclass(obj, Axo) and obj.__name__ != "Axo":
-    #                 rebuilt_class = obj
-    #                 break
-    #         if rebuilt_class is None:
-    #             raise Exception("No valid Axo class could be rebuilt")
-
-    #         # Now safely deserialize the rest
-    #         attrs = cp.loads(raw_parts[0])
-    #         methods = cp.loads(raw_parts[1])
-    #         class_df = rebuilt_class  # You can also `cp.loads(raw_parts[2])` if needed
-
-    #         return Ok((attrs, methods, class_df, code_str))
-
-    #     except Exception as e:
-    #         return Err(e)
-        
     @staticmethod
     def get_parts(raw_obj: bytes) -> Result[Tuple[Dict[str, Any], Dict[str, Any], Type[Axo], str], Exception]:
         try:

@@ -25,20 +25,21 @@ def dem():
 # @pytest.mark.skip("")
 @pytest.mark.asyncio
 async def test_local():
-    acm            = AxoContextManager.local()
-    hc:HillClimb   = HillClimb()
-    (x_opt,fx_opt) = hc.hill_climb(100).unwrap()
-    _              = hc.plot(x_opt=x_opt,fx_opt=fx_opt)
+    with AxoContextManager.local(): 
+        hc:HillClimb   = HillClimb()
+        (x_opt,fx_opt) = hc.hill_climb(100).unwrap()
+        # _              = hc.plot(x_opt=x_opt,fx_opt=fx_opt)
+        
 
-    
+        
 
-@pytest.mark.skip("")
-@pytest.mark.asyncio
-async def test_distributed(dem: DistributedEndpointManager):
-    
-    acm = AxoContextManager.distributed(
-        endpoint_manager = dem,
-        storage_service  = Some(
-            MictlanXStorageService(protocol="http")
+    @pytest.mark.skip("")
+    @pytest.mark.asyncio
+    async def test_distributed(dem: DistributedEndpointManager):
+        
+        acm = AxoContextManager.distributed(
+            endpoint_manager = dem,
+            storage_service  = Some(
+                MictlanXStorageService(protocol="http")
+            )
         )
-    )

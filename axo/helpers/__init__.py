@@ -7,7 +7,7 @@ import string
 import re
 from axo.environment import AXO_ID_SIZE,ALPHABET
 
-def _generate_id(val: str | None, *, size: int = AXO_ID_SIZE) -> str:
+def _generate_id(val: str | None=None, *, size: int = AXO_ID_SIZE) -> str:
     """Return a valid identifier containing only a‑z 0‑9 _ ."""
     if not val:
         return nanoid(alphabet=ALPHABET, size=size)

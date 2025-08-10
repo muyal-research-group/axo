@@ -71,7 +71,7 @@ class LocalRuntime(ActiveXRuntime,Thread):
         maxsize: int = 100,
         q_tick_s:int = 1,
     ) -> None:
-        super().__init__(daemon=True)
+        super().__init__(name=runtime_id,daemon=True)
         self.__runtime_id = runtime_id
         # Shared task queue ------------------------------------------------
         self.__q: Queue = Queue(maxsize=maxsize)
@@ -150,7 +150,7 @@ class LocalRuntime(ActiveXRuntime,Thread):
                 "service_time":T.time() - t1
             })
             # 2) class definition
-            attrs,methods, class_def, class_code = instance.get_raw_parts()
+            attrs,class_code = instance.get_raw_parts()
 
             t1 = T.time()
             attrs_put_result = await self.storage_service.put(

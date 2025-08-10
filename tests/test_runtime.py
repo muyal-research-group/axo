@@ -7,7 +7,7 @@ import hashlib as H
 
 class Hasher(Axo):
     @axo_method
-    def sha256(self,x:bytes):
+    def sha256(self,x:bytes,**kwargs):
         h = H.sha256()
         h.update(x)
         return h.digest()
@@ -23,6 +23,8 @@ async def test_runtime():
         )
     )
     x = Hasher(axo_key = "hasher_0")
-    print(lr.persistify(instance=x))
-    T.sleep(5)
+    res= await lr.persistify(instance=x)
+    print("RES",res)
+    assert res.is_ok
+    # T.sleep(5)
     assert lr.name == runtime_id

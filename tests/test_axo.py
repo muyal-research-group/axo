@@ -1,5 +1,6 @@
 import pytest
-from axo import Axo,MetadataX
+from axo import Axo
+from axo.core.models import MetadataX
 from .objects import Dog
 from axo.contextmanager import AxoContextManager
 

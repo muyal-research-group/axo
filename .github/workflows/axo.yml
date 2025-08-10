@@ -21,7 +21,17 @@ jobs:
       run: |
         curl -sSL https://install.python-poetry.org | python3 -
         echo "$HOME/.local/bin" >> $GITHUB_PATH
-
+    - name: Allow writing to folders
+      run: |
+          sudo mkdir -p /log
+          sudo chown $USER:$USER /log
+          sudo chmod 777 /log
+          sudo mkdir -p /mictlanx
+          sudo chown $USER:$USER /mictlanx
+          sudo chmod 777 /mictlanx
+          sudo mkdir -p /sink
+          sudo chown $USER:$USER /sink
+          sudo chmod 777 /sink
     - name: Install dependencies
       run: poetry install
 
