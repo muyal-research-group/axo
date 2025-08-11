@@ -16,17 +16,17 @@ class Calc(Axo):
         self.path = "/source/01.pdf"
 
     @axo_method
-    def sum(x:int,y:int):
+    def sum(self,x:int,y:int,**kwargs):
         return x+y
     
     @axo_method
-    def substract(x:int,y:int):
+    def substract(self,x:int,y:int,**kwargs):
         return x-y
     @axo_method
-    def multiply(x:int,y:int):
+    def multiply(self,x:int,y:int,**kwargs):
         return x*y
     @axo_method
-    def divide(x:int,y:int):
+    def divide(self,x:int,y:int,**kwargs):
         return x/y if y >0 else 0
     
 
@@ -44,10 +44,55 @@ class Calc(Axo):
         print(f"Hola soy una Calculadora mi nombre es {self.id}")
 
 
+
+@pytest.fixture()
+def dem():
+    x = DistributedEndpointManager()
+    x.add_endpoint(
+        endpoint_id="axo-endpoint-0",
+        hostname="localhost",
+        protocol="tcp",
+        pubsub_port=16666,
+        req_res_port=16667,
+    )
+    return x
+
 @pytest.mark.asyncio
 async def test_local_cm():
     lcm = AxoContextManager.local()
     assert not lcm.runtime.is_distributed
+
+@pytest.mark.asyncio
+async def test_local_cm_method_execution():
+    with AxoContextManager.local() as lrt:
+        c:Calc = Calc(id = "CALC")
+        res = c.sum(1,2)
+        assert res.is_ok
+        res = c.substract(1,2)
+        assert res.is_ok
+        res = c.multiply(1,2)
+        assert res.is_ok
+        res = c.divide(1,2)
+        assert res.is_ok
+
+@pytest.mark.asyncio
+async def test_distributed_cm_method_execution(dem:DistributedEndpointManager):
+    with AxoContextManager.distributed(endpoint_manager=dem) as drt:
+        c:Calc = Calc(id = "CALC",axo_endpoint_id = "axo-endpoint-0")
+        res = await c.persistify()
+        assert res.is_ok
+        res = c.sum(1,2)
+        assert res.is_ok
+        res = c.substract(1,2)
+        assert res.is_ok
+        res = c.multiply(1,2)
+        assert res.is_ok
+        res = c.divide(1,2)
+        assert res.is_ok
+
+    
+
+    # assert not lcm.runtime.is_distributed
     
 @pytest.mark.asyncio
 async def test_local_cm_none_runtime():

@@ -121,7 +121,12 @@ class DistributedRuntime(ActiveXRuntime,Thread):
                 "event":"ENDPOINT.PUT",
                 "response_time":T.time() - t1
             })
-            attrs,methods, class_def, class_code = instance.get_raw_parts()
+            raw_parts_result = instance.get_raw_parts()
+            if raw_parts_result.is_err:
+                return Err(raw_parts_result.unwrap_err())
+            
+            attrs, class_code = raw_parts_result.unwrap()
+            print("HREE",attrs)
             attrs_put_result = await self.storage_service.put(
                 bucket_id=bucket_id,
                 key = f"{key}_attrs",
@@ -131,6 +136,7 @@ class DistributedRuntime(ActiveXRuntime,Thread):
                 }, 
                 data =CP.dumps(attrs)
             )
+            print("AFTER_RSOT", attrs_put_result)
             if attrs_put_result.is_err:
                 return Err(attrs_put_result.unwrap_err())
 
@@ -140,8 +146,6 @@ class DistributedRuntime(ActiveXRuntime,Thread):
                 key = f"{key}_source_code",
                 tags = {
                     **tags
-                    # "module": instance._acx_metadata.module,
-                    # "claass_name": instance._acx_metadata.class_name,
                 }, 
                 data = CP.dumps(class_code.encode("utf-8"))
             )

@@ -14,7 +14,7 @@ class Hasher(Axo):
     
 
 @pytest.mark.asyncio
-async def test_runtime():
+async def test_local_runtime():
     runtime_id = "local_rt"
     lr = LocalRuntime(
         runtime_id=runtime_id,
@@ -28,3 +28,15 @@ async def test_runtime():
     assert res.is_ok
     # T.sleep(5)
     assert lr.name == runtime_id
+
+@pytest.mark.asyncio
+async def test_local_runtime_endpoint_manager():
+    runtime_id = "local_rt"
+    lr = LocalRuntime(
+        runtime_id=runtime_id,
+        storage_service=LocalStorageService(
+            storage_service_id="local_ss"
+        )
+    )
+    res = lr.endpoint_manager.get_endpoint(endpoint_id="axo-endpoint-0")
+    # print("RES",res)

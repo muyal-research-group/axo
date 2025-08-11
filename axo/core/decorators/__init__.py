@@ -72,7 +72,10 @@ def axo_method(wrapped: Callable[..., R]) -> Callable[..., Result[R, Exception]]
 
 
 
-            ep = rt.endpoint_manager.get_endpoint(kwargs.get("axo_endpoint_id", "") )
+            e_id = kwargs.get("axo_endpoint_id", instance.get_endpoint_id()) 
+
+            ep = rt.endpoint_manager.get_endpoint(e_id)
+            
             instance.set_endpoint_id(ep.endpoint_id)
 
             kwargs.setdefault("axo_endpoint_id", ep.endpoint_id)

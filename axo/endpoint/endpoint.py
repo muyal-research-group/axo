@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 import logging
-import types
+import types,inspect
 import time
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict,  TypeVar
@@ -158,7 +158,9 @@ class LocalEndpoint(EndpointX):
             if hasattr(ao, fname):
                 attr = getattr(ao, fname)
                 if isinstance(attr, types.MethodType):
-                    return Ok(attr(*fargs, **fkwargs))
+                    _f = attr.__func__
+                    f  = inspect.unwrap(_f)
+                    return Ok(f(ao,*fargs, **fkwargs))
                 else:
                     e_msg = f"{fname} exists but is not a bound method. "
                     logger.error({"event":"METOD.NOT.CALLABLE","detail":e_msg})
