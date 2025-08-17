@@ -1,0 +1,37 @@
+name: ✨ Feature Request
+description: Suggest an idea for this project.
+title: "[Feature]: "
+labels: ["enhancement"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please describe your idea below.
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature description
+      description: What should the feature do?
+      placeholder: "As a user, I want ..."
+    validations:
+      required: true
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Why is this feature useful? What problem does it solve?
+      placeholder: "This will help because ..."
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Any alternative solutions you've considered?
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting, you agree to follow our [Code of Conduct](../CODE_OF_CONDUCT.md).
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true
