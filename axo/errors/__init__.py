@@ -35,7 +35,7 @@ def _default_code(et: AxoErrorType) -> int:
         AxoErrorType.BAD_REQUEST:              AxoErrorCode.BAD_REQUEST,
         AxoErrorType.UNKNOWN_OPERATION:        AxoErrorCode.UNKNOWN_OPERATION,
         AxoErrorType.VALIDATION_FAILED:        AxoErrorCode.VALIDATION_FAILED,
-        AxoErrorType.ACTIVE_OBJECT_NOT_FOUND:  AxoErrorCode.ACTIVE_OBJECT_NOT_FOUND,
+        AxoErrorType.NOT_FOUND:  AxoErrorCode.NOT_FOUND,
         AxoErrorType.CONCURRENCY_CONFLICT:     AxoErrorCode.CONCURRENCY_CONFLICT,
         AxoErrorType.TIMEOUT:                  AxoErrorCode.TIMEOUT,
         AxoErrorType.STORAGE_ERROR:            AxoErrorCode.STORAGE_ERROR,

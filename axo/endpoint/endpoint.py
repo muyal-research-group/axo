@@ -23,13 +23,15 @@ import types,inspect
 import time
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict,  TypeVar
-
+# 
 import cloudpickle as cp
 import humanfriendly as hf
 import zmq
-
-from axo.storage.metadata import MetadataX
 from option import Err, Ok, Result
+# 
+from axo.storage.metadata import MetadataX
+from axo.models import AxoRequestEnvelope,AxoReplyEnvelope,AxoReplyMsg,Ping,PutMetadata
+
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from axo.core.axo import Axo  # type-only; not executed at runtime
@@ -297,8 +299,13 @@ class DistributedEndpoint(EndpointX):
         try:
             if not self._ensure_connection():
                 return Err(Exception("Unable to connect"))
-            self._req.send_multipart([b"axo", b"PING", b"{}"])
-            _ = self._req.recv_multipart()
+            ping_msg = Ping()
+            self._req.send_multipart(ping_msg.to_frames())
+            # self._req.send_multipart([b"axo", b"PING", b"{}"])
+            
+            frames = self._req.recv_multipart()
+            req = AxoReplyMsg.from_frames(frames)
+            print("PING_RES",req)
             return Ok(True)
         except Exception as e:
             return Err(e)
@@ -309,10 +316,12 @@ class DistributedEndpoint(EndpointX):
         if not self._ensure_connection():
             return Err(Exception("Unable to connect"))
 
-        payload = json.dumps(value.model_dump()).encode(self.encoding)
+        # payload = json.dumps(value.model_dump()).encode(self.encoding)
         try:
-            self._req.send_multipart([b"axo", b"PUT.METADATA", payload])
-            _ = self._req.recv_multipart()
+            msg = PutMetadata(metadata=value)
+            self._req.send_multipart(msg.to_frames())
+            res = self._req.recv_multipart()
+            print("PUT_RES",res)
             return Ok(key)
         except Exception as exc:
             self._cleanup()

@@ -19,11 +19,11 @@ import string
 import time as T
 logger = get_logger(name= __name__)
 class AxoContextManager:
-    is_running = False
     def __init__(self, runtime:Optional[ActiveXRuntime] = None):
         self.start_time = T.time()
         self.prev_runtime = None
         self.runtime = runtime
+        self.is_running = True
 
     @staticmethod
     def local()->'AxoContextManager':

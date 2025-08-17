@@ -61,6 +61,8 @@ def dem():
 async def test_local_cm():
     lcm = AxoContextManager.local()
     assert not lcm.runtime.is_distributed
+    lcm.stop()
+    lcm.stop()
 
 @pytest.mark.asyncio
 async def test_local_cm_method_execution():

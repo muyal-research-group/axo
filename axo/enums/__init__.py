@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum,IntEnum,auto
 class StrEnum(str, Enum):
     """
     Backport of Python 3.11's StrEnum for Python < 3.11.
@@ -10,6 +10,46 @@ class StrEnum(str, Enum):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}.{self.name}"
+class TaskStatus(Enum):
+    PENDING   = auto()
+    RUNNING   = auto()
+    SUCCESS   = auto()
+    FAILED    = auto()
+    TIMEOUT   = auto()
+    CANCELLED = auto()
+
+class AxoErrorType(StrEnum):
+    BAD_REQUEST             = "BAD_REQUEST"
+    UNKNOWN_OPERATION       = "UNKNOWN_OPERATION"
+    VALIDATION_FAILED       = "VALIDATION_FAILED"
+    CONCURRENCY_CONFLICT    = "CONCURRENCY_CONFLICT"
+    DEPENDENCY_INSTALL_FAIL = "DEPENDENCY_INSTALL_FAIL"
+    ENDPOINT_COLD           = "ENDPOINT_COLD"
+    NOT_LEADER              = "NOT_LEADER"
+    STORAGE_ERROR           = "STORAGE_ERROR"
+    INTERNAL_ERROR          = "INTERNAL_ERROR"
+    TRANSPORT_ERROR         = "TRANSPORT_ERROR"
+    # 
+    TIMEOUT                 = "TIMEOUT"
+    NOT_FOUND               = "NOT_FOUND"
+    ALREADY_EXISTS          = "ALREADY_EXISTS"
+
+class AxoErrorCode(IntEnum):
+    OK                   = 0
+    BAD_REQUEST          = -400
+    UNKNOWN_OPERATION    = -404
+    VALIDATION_FAILED    = -422
+    NOT_FOUND            = -440
+    ALREADY_EXISTS       = -441
+    CONCURRENCY_CONFLICT = -460
+    TIMEOUT              = -480
+    STORAGE_ERROR        = -500
+    DEP_INSTALL_FAIL     = -510
+    ENDPOINT_COLD        = -520
+    NOT_LEADER           = -530
+    TRANSPORT_ERROR      = -540
+    INTERNAL_ERROR       = -599
+    
 
 class AxoOperationType(StrEnum):
     PUT_METADATA    = "PUT_METADATA"

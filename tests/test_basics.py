@@ -52,7 +52,7 @@ def test_local():
         print(res)
 
 
-@pytest.mark.skip("")
+# @pytest.mark.skip("")
 @pytest.mark.asyncio
 async def test_distributed(dem:DistributedEndpointManager):
     with AxoContextManager.distributed( endpoint_manager= dem) as cmx:
