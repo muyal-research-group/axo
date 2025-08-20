@@ -1,6 +1,6 @@
 services:
     activex-endpoint-0:
-        image: nachocode/axo:endpoint-0.0.1a4
+        image: nachocode/axo:endpoint-0.0.2
         container_name: axo-endpoint-0
         ports:
                 - 16666:16666
@@ -11,7 +11,7 @@ services:
                 - AXO_LOGGER_PATH=/log
                 - AXO_LOGGER_WHEN=h
                 - AXO_LOGGER_INTERVAL=24
-                - AXO_ENDPOINT_IMAGE=nachocode/axo:endpoint-0.0.1a4
+                - AXO_ENDPOINT_IMAGE=nachocode/axo:endpoint-0.0.2
                 - AXO_PROTOCOL=tcp
                 - AXO_PUB_SUB_PORT=16666
                 - AXO_REQ_RES_PORT=16667
@@ -29,15 +29,15 @@ services:
                 - MICTLANX_MAX_WORKERS=4
                 - MICTLANX_ROUTERS=axo-storage-router-0:axo-storage-router-0:60666
         volumes:
-                - activex-endpoint-0:/log
-                - activex-endpoint-0-source:/source
-                - activex-endpoint-0-sink:/sink
+                - axo-endpoint-0:/log
+                - axo-endpoint-0-source:/source
+                - axo-endpoint-0-sink:/sink
         networks:
                 - axo-net
 volumes:
-    activex-endpoint-0:
-    activex-endpoint-0-sink:
-    activex-endpoint-0-source:
+    axo-endpoint-0:
+    axo-endpoint-0-sink:
+    axo-endpoint-0-source:
 networks:
     axo-net:
        external: true
