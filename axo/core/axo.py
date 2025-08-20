@@ -159,13 +159,15 @@ class Axo(metaclass=AxoMeta):
         # print(kwargs)
         obj = super().__new__(cls)
         obj._acx_metadata = MetadataX(
-            axo_class_name=cls.__name__, axo_module=cls.__module__, axo_name=cls.__name__
+            axo_class_name=cls.__name__, axo_module=cls.__module__
         )
-        obj._acx_metadata.axo_bucket_id = kwargs.get("axo_bucket_id",obj._acx_metadata.axo_bucket_id)
+        obj._acx_metadata.axo_bucket_id        = kwargs.get("axo_bucket_id",obj._acx_metadata.axo_bucket_id)
         obj._acx_metadata.axo_source_bucket_id = kwargs.get("axo_source_bucket_id",obj._acx_metadata.axo_source_bucket_id)
-        obj._acx_metadata.axo_sink_bucket_id = kwargs.get("axo_sink_bucket_id",obj._acx_metadata.axo_sink_bucket_id)
-        obj._acx_metadata.axo_key = kwargs.get("axo_key",obj._acx_metadata.axo_key)
-        obj._acx_metadata.axo_endpoint_id = kwargs.get("axo_endpoint_id",obj._acx_metadata.axo_endpoint_id)
+        obj._acx_metadata.axo_sink_bucket_id   = kwargs.get("axo_sink_bucket_id",obj._acx_metadata.axo_sink_bucket_id)
+        obj._acx_metadata.axo_key              = kwargs.get("axo_key",obj._acx_metadata.axo_key)
+        obj._acx_metadata.axo_alias            = kwargs.get("axo_alias",obj._acx_metadata.axo_alias)
+        obj._acx_metadata.axo_version          = kwargs.get("axo_version",obj._acx_metadata.axo_version)
+        obj._acx_metadata.axo_endpoint_id      = kwargs.get("axo_endpoint_id",obj._acx_metadata.axo_endpoint_id)
         return obj
     
     def __init__(self,*args,**kwargs):

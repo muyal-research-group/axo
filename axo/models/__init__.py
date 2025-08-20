@@ -3,6 +3,7 @@ import json as J
 import time as T
 from typing import Any, Dict, List, Optional,Annotated,Tuple
 # 
+import cloudpickle as CP
 from pydantic import BaseModel, Field, ValidationError, field_validator,AfterValidator,model_validator
 from option import Ok, Err, Result
 import humanfriendly as HF
@@ -59,29 +60,27 @@ class Task:
 # ---------- Pydantic envelopes ----------
 class AxoRequestEnvelope(BaseModel):
     # transport / routing
-    msg_id: str = Field(default_factory=lambda: _generate_id(size=AXO_ID_SIZE), description="Unique id for this request")
-    task_id: Optional[str] = Field(None, description="Optional client task id / correlation id")
-    operation: str = Field(..., description="PUT.METADATA | METHOD.EXEC | ELASTICITY | PING | ...")
-
-    # target object & method (METHOD.EXEC)
-    axo_uri: Optional[str] = None          # e.g., "axo://axo/CALC"
-    method: Optional[str] = None             # e.g., "sum"
-
-    # concurrency
-    pre_version: Optional[int] = None
-    allow_stale: bool = False
-
-    # common Axo ids (kept to support your Task.get_* helpers)
-    class_name:Optional[str] = None
-    axo_endpoint_id: Optional[str] = None
-    axo_bucket_id: Optional[str] = None
-    axo_key: Optional[str] = None
+    msg_id: str                         = Field(default_factory=lambda: _generate_id(size=AXO_ID_SIZE), description="Unique id for this request")
+    task_id: Optional[str]              = Field(None, description="Optional client task id / correlation id")
+    operation: str                      = Field(..., description="PUT.METADATA | METHOD.EXEC | ELASTICITY | PING | ...")
+    method: Optional[str]               = None             # e.g., "sum"
+    allow_stale: Optional[bool]         = False
+    path:Optional[str]                  = None
+    source_path:Optional[str]           = None
+    sink_path:Optional[str]             = None
+    axo_is_read_only:Optional[bool]     = False
+    axo_key: Optional[str]              = None
+    axo_module:Optional[str]            = None
+    axo_class_name:Optional[str]        = None
+    axo_version: Optional[int]          = None
+    axo_bucket_id: Optional[str]        = None
     axo_source_bucket_id: Optional[str] = None
-    axo_sink_bucket_id: Optional[str] = None
+    axo_sink_bucket_id: Optional[str]   = None
+    axo_endpoint_id: Optional[str]      = None
+    axo_dependencies: List[str]         = Field(default_factory=list)
+    axo_uri: Optional[str]              = None          # e.g., "axo://axo/CALC"
+    axo_alias:Optional[str]             = None
 
-    # QoL / misc
-    dependencies: List[str] = Field(default_factory=list)
-    separator: str = ";"
 
     @field_validator("operation")
     @classmethod
@@ -92,9 +91,24 @@ class AxoRequestEnvelope(BaseModel):
     def _autofill_axo_uri(self):
         # Only fill if caller didn't set axo_uri explicitly
         if not self.axo_uri:
-            self.axo_uri = _build_axo_uri(self.axo_bucket_id,self.axo_key, self.class_name, self.method)
+            self.axo_uri = _build_axo_uri(self.axo_bucket_id,self.axo_key, self.axo_class_name, self.method)
         return self
-
+    def get_metadatax(self)->MetadataX:
+        x = self
+        return MetadataX(
+            axo_alias            = x.axo_alias,
+            axo_bucket_id        = x.axo_bucket_id,
+            axo_class_name       = x.axo_class_name,
+            axo_dependencies     = x.axo_dependencies,
+            axo_endpoint_id      = x.axo_endpoint_id,
+            axo_is_read_only     = x.axo_is_read_only,
+            axo_key              = x.axo_key,
+            axo_module           = x.axo_module,
+            axo_sink_bucket_id   = x.axo_sink_bucket_id,
+            axo_source_bucket_id = x.axo_source_bucket_id,
+            axo_uri              = x.axo_uri,
+            axo_version          = x.axo_version
+        )
 class AxoReplyEnvelope(BaseModel):
     # mirrors request + result status
     msg_id: Optional[str] = None
@@ -176,6 +190,7 @@ class AxoReplyMsg(BaseModel):
             if proto != PROTO:   return Err(AxoError.make(msg=f"Unsupported protocol version: {proto!r}", error_type=AxoErrorType.BAD_REQUEST))
             if ctype != JSON_CT: return Err(AxoError.make(msg = f"Unsupported content type: {ctype!r}", error_type=AxoErrorType.BAD_REQUEST))
             op = op_b.decode("utf-8", errors="replace").strip().upper()
+
             if expect_operation and op != expect_operation.upper():
                 return Err(AxoError.make(msg = f"Unexpected reply op={op}, expected={expect_operation}", error_type=AxoErrorType.BAD_REQUEST))
             env = AxoReplyEnvelope.model_validate(J.loads(env_b))
@@ -196,7 +211,6 @@ class Ping(AxoRequestMsg):
         axo_source_bucket_id: str="",
         axo_sink_bucket_id: str="",
         dependencies: Optional[List[str]] = None,
-        separator: str = ";",
         task_id: Optional[str] = None,
     ):
         env = AxoRequestEnvelope(
@@ -204,8 +218,7 @@ class Ping(AxoRequestMsg):
             task_id=task_id,
             operation="PING",
             allow_stale=True,
-            separator=separator,
-            dependencies=dependencies or [],
+            axo_dependencies=dependencies or [],
             axo_sink_bucket_id=axo_sink_bucket_id,
             axo_source_bucket_id=axo_source_bucket_id,
             axo_key=axo_key,
@@ -239,7 +252,6 @@ class PutMetadata(AxoRequestMsg):
         # axo_sink_bucket_id: str="",
         # dependencies: Optional[List[str]] = None,
         allow_stale:bool = True,
-        separator: str = ";",
         task_id: Optional[str] = None,
     ):
         env = AxoRequestEnvelope(
@@ -247,19 +259,25 @@ class PutMetadata(AxoRequestMsg):
             task_id              = task_id,
             operation            = AxoOperationType.PUT_METADATA,
             allow_stale          = allow_stale,
-            separator            = separator,
-            dependencies         = metadata.axo_dependencies or [],
+            axo_dependencies     = metadata.axo_dependencies or [],
             axo_sink_bucket_id   = metadata.axo_sink_bucket_id,
             axo_source_bucket_id = metadata.axo_source_bucket_id,
             axo_key              = metadata.axo_key,
             axo_bucket_id        = metadata.axo_bucket_id,
             axo_endpoint_id      = metadata.axo_endpoint_id,
-            pre_version          = metadata.axo_version,
+            axo_version          = metadata.axo_version,
             axo_uri              = metadata.axo_uri,
-            class_name           = metadata.axo_class_name,
-            # method               = metadata
+            axo_class_name       = metadata.axo_class_name,
+            axo_alias            = metadata.axo_alias,
+            axo_is_read_only     = metadata.axo_is_read_only,
+            axo_module           = metadata.axo_module,
+            path                 = metadata.path,
+            sink_path            = metadata.sink_path,
+            source_path          = metadata.source_path,
         )
+
         super().__init__(envelope=env, payload=[])  # no extra frames for PING
+
 
     @staticmethod
     def parse_reply(frames: List[bytes]) -> Result[AxoReplyEnvelope, AxoError]:
@@ -271,3 +289,54 @@ class PutMetadata(AxoRequestMsg):
             detail = (msg.envelope.error or {}).get("message", "Put metadata failed")
             return Err(AxoError.make(msg = detail, error_type=AxoErrorType.INTERNAL_ERROR))
         return Ok(msg.envelope)
+
+
+class MethodExecution(AxoRequestMsg):
+    def __init__(
+        self,
+        *,
+        method:str,
+        metadata:MetadataX,
+        fargs: list[Any] | None = [],
+        fkwargs: Dict[str, Any] | None = {},
+        allow_stale:bool = True,
+        task_id: Optional[str] = None,
+    ):
+        _fargs = CP.dumps(fargs or [])
+        _fkwargs = CP.dumps(fkwargs or {})
+        env = AxoRequestEnvelope(
+            msg_id               = _generate_id(size=AXO_ID_SIZE),
+            task_id              = task_id,
+            operation            = AxoOperationType.METHOD_EXEC,
+            allow_stale          = allow_stale,
+            axo_dependencies     = metadata.axo_dependencies or [],
+            axo_sink_bucket_id   = metadata.axo_sink_bucket_id,
+            axo_source_bucket_id = metadata.axo_source_bucket_id,
+            axo_key              = metadata.axo_key,
+            axo_bucket_id        = metadata.axo_bucket_id,
+            axo_endpoint_id      = metadata.axo_endpoint_id,
+            axo_version          = metadata.axo_version,
+            axo_uri              = metadata.axo_uri,
+            axo_class_name       = metadata.axo_class_name,
+            axo_alias            = metadata.axo_alias,
+            axo_is_read_only     = metadata.axo_is_read_only,
+            axo_module           = metadata.axo_module,
+            path                 = metadata.path,
+            sink_path            = metadata.sink_path,
+            source_path          = metadata.source_path,
+            method = method
+        )
+
+        super().__init__(envelope=env, payload=[_fargs,_fkwargs])  # no extra frames for PING
+
+
+    # @staticmethod
+    # def parse_reply(frames: List[bytes]) -> Result[AxoReplyEnvelope, AxoError]:
+    #     parsed = AxoReplyMsg.from_frames(frames, expect_operation=AxoOperationType.PUT_METADATA)
+    #     if parsed.is_err:
+    #         return Err(parsed.unwrap_err())
+    #     msg, _ = parsed.unwrap()
+    #     if msg.envelope.status != "ok":
+    #         detail = (msg.envelope.error or {}).get("message", "Put metadata failed")
+    #         return Err(AxoError.make(msg = detail, error_type=AxoErrorType.INTERNAL_ERROR))
+    #     return Ok(msg.envelope)

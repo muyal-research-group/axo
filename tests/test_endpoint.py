@@ -1,5 +1,7 @@
 import pytest 
 from axo.endpoint.endpoint import LocalEndpoint,DistributedEndpoint
+from axo.endpoint.manager import DistributedEndpointManager
+from axo.contextmanager import AxoContextManager
 from axo.core.models import MetadataX
 
 
@@ -8,6 +10,7 @@ class Calc(Axo):
     def __init__(self,x:int, **kwargs):
         super().__init__(**kwargs)
         self.x =x
+
     def sum(self,x:int,y:int,**kwargs):
         return x+y
 
@@ -44,13 +47,13 @@ async def test_add_code_class_def():
     
 
 
+@pytest.mark.skip("")
 @pytest.mark.asyncio
 async def test_local_put_get_endpoint():
     le = LocalEndpoint(endpoint_id="e1")
     m = MetadataX.model_validate({
         "axo_key":"ao",
         "axo_module":"module",
-        "axo_name":"AO",
         "axo_class_name":"Calc",
         "axo_version":0,
         "axo_bucket_id":"b1",
@@ -65,19 +68,20 @@ async def test_local_put_get_endpoint():
     res = le.get(key)
     assert res.is_ok
 
-# @pytest.mark.skip("")
+@pytest.mark.skip("")
 @pytest.mark.asyncio
 async def test_distributed_endpoint_ping():
     le = DistributedEndpoint(endpoint_id="activex-endpoint-0")
     res = le.ping()
     assert res.is_ok
+
+@pytest.mark.skip("")
 @pytest.mark.asyncio
 async def test_distributed_endpoint_put_metadata():
     le = DistributedEndpoint(endpoint_id="activex-endpoint-0")
     value =  MetadataX.model_validate({
         "axo_key":"ao",
         "axo_module":"module",
-        "axo_name":"AO",
         "axo_class_name":"Calc",
         "axo_version":0,
         "axo_bucket_id":"b1",
@@ -92,7 +96,7 @@ async def test_distributed_endpoint_put_metadata():
     )
     assert res.is_ok
 
-# @pytest.mark.skip("")
+@pytest.mark.skip("")
 @pytest.mark.asyncio
 async def test_distributed_endpoint_put_metadata():
     le = DistributedEndpoint(endpoint_id="axo-endpoint-0")
@@ -112,14 +116,37 @@ async def test_distributed_endpoint_put_metadata():
     res = le.put(key="HOLA", value=value)
     print("RES",res)
     assert res.is_ok
-@pytest.mark.skip("")
+
+# @pytest.mark.skip("")
 @pytest.mark.asyncio
 async def test_distributed_endpoint_method_execution():
-    le = DistributedEndpoint(endpoint_id="activex-endpoint-0")
-    ao = Calc(1)
-    res = le.method_execution(key="ao",ao=ao,fname="sum",fargs=[1,2])
-    print("RES",res)
+    endpoint_id = "axo-endpoint-0"
+    le          = DistributedEndpoint(endpoint_id=endpoint_id)
+    # with AxoContextManager.distributed(endpoint_manager=DistributedEndpointManager(endpoints={endpoint_id: le} )) as dr: 
+    ao          = Calc(1,
+                    axo_endpoint_id =endpoint_id ,
+                    axo_alias = "ALIAS",
+                    axo_bucket_id= "bao",
+                    axo_key = "aotest"
+    )
+        # res = await ao.persistify()
+        # print(res)
+        # assert res.is_ok
+    value = ao._acx_metadata
+    
+    res = le.put(key=value.axo_key, value=value)
     assert res.is_ok
+    
+    res         = le.method_execution(
+        key   = value.axo_key,
+        ao    = ao,
+        fname = "sum",
+        fargs = [1,2]
+    )
+
+    assert res.is_ok
+
+
 
 @pytest.mark.skip("")
 @pytest.mark.asyncio

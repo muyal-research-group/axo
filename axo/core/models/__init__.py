@@ -4,7 +4,6 @@ from typing import ClassVar,Optional,List,Dict,Any,Tuple
 import os
 import re
 # 
-from axo.environment import AXO_ID_SIZE
 from axo.helpers import _generate_id,_build_axo_uri
 
 # pydantic *Annotated* alias for object keys
@@ -27,7 +26,11 @@ def _norm_ident(s: str) -> str:
 
 # def _build_axo_uri(bucket: str, key: str, version: int) -> str:
 #     return f"axo://{bucket}:{key}/{version}"
-
+def _norm_strip(v: Optional[str]) -> Optional[str]:
+    """Remove leading/trailing whitespace and all spaces inside."""
+    if v is None:
+        return None
+    return "".join(v.split())  # removes *all* spaces
 class MetadataX(BaseModel):
     """Serializable metadata stored alongside every active object."""
 
@@ -41,15 +44,15 @@ class MetadataX(BaseModel):
     # Stored fields ------------------------------------------------------------
     axo_is_read_only: bool = False
 
-    axo_key: Optional[str] = None
+    axo_key:str = Field(default_factory=lambda: _generate_id(None))
+    axo_bucket_id: str = Field(default_factory=lambda: _generate_id(None))
+    axo_source_bucket_id: str =  Field(default_factory=lambda: _generate_id(None))
+    axo_sink_bucket_id: str = Field(default_factory=lambda: _generate_id(None))
     axo_module: str
-    axo_name: str
+    # axo_name: str
     axo_class_name: str
     axo_version: int = 0  # non-negative; see validator
 
-    axo_bucket_id: Optional[str] = None
-    axo_source_bucket_id: Optional[str] = None
-    axo_sink_bucket_id: Optional[str] = None
 
     axo_endpoint_id: Optional[str] = None
     axo_dependencies: List[str] = Field(default_factory=list)
@@ -60,6 +63,12 @@ class MetadataX(BaseModel):
 
     # ------------------------------ Validators -------------------------------
 
+    @field_validator("axo_dependencies", mode="before")
+    @classmethod
+    def _v_strip_deps(cls, v: List[str]) -> List[str]:
+        return [_norm_strip(d) for d in v] if v else []
+
+    
     @field_validator("axo_version")
     @classmethod
     def _v_non_negative(cls, v: int) -> int:
@@ -67,7 +76,7 @@ class MetadataX(BaseModel):
             raise ValueError("axo_version must be >= 0")
         return v
 
-    @field_validator("axo_module", "axo_name", "axo_class_name")
+    @field_validator("axo_module",  "axo_class_name")
     @classmethod
     def _v_non_empty_norm(cls, v: str) -> str:
         v = _norm(v)
@@ -88,34 +97,59 @@ class MetadataX(BaseModel):
                 out.append(d2)
         return out
 
+    
+    @field_validator("axo_module", "axo_class_name", "axo_key",
+                     "axo_bucket_id", "axo_source_bucket_id",
+                     "axo_sink_bucket_id", "axo_endpoint_id", "axo_alias",
+                     mode="before")
+    @classmethod
+    def _v_strip_spaces(cls, v: Optional[str]) -> Optional[str]:
+        """Remove leading/trailing whitespace and all spaces inside."""
+        return _norm_strip(v)
     @model_validator(mode="after")
-    def _fill_ids_and_uri(self) -> "MetadataX":
-        # IDs: only generate when missing/empty
-        # if not self.axo
-        # if self.axo
-        if self.axo_key is None or self.axo_key == "":
-            self.axo_key              = _generate_id(self.axo_key)
-        if self.axo_bucket_id is None or self.axo_bucket_id == "":
-            self.axo_bucket_id        = _generate_id(self.axo_bucket_id,        size=AXO_ID_SIZE * 2)
+    def _fill_alias_and_uri(self) -> "MetadataX":
+        if not self.axo_alias:
+            object.__setattr__(self, "axo_alias", str(self.axo_key))
 
-        if self.axo_sink_bucket_id is None or self.axo_sink_bucket_id =="":
-            self.axo_sink_bucket_id   = _generate_id(self.axo_sink_bucket_id,   size=AXO_ID_SIZE * 2)
-        if self.axo_source_bucket_id is None or self.axo_source_bucket_id =="":
-            self.axo_source_bucket_id = _generate_id(self.axo_source_bucket_id, size=AXO_ID_SIZE * 2)
+        # Always (re)build URI
+        uri = _build_axo_uri(
+            axo_bucket_id=self.axo_bucket_id,
+            axo_key=self.axo_key,
+            axo_version=self.axo_version,
+            class_name=self.axo_class_name,
+            method       =None,  # or self.axo_method if you add one
+        )
+        object.__setattr__(self, "axo_uri", uri)
 
-        # Alias (simple, stable)
-        if self.axo_alias is None or self.axo_alias =="":
-            self.axo_alias = self.axo_alias or str(self.axo_key)
-
-        # axo_uri: if caller provided one, trust but validate; else build
-        if self.axo_uri:
-            b, k, v = self._parse_axo_uri(self.axo_uri)
-            # if uri conflicts with fields, prefer explicit fields and rebuild
-            if b != self.axo_bucket_id or k != self.axo_key or (v is not None and v != self.axo_version):
-                self.axo_uri = _build_axo_uri(self.axo_bucket_id, self.axo_key, self.axo_version)
-        else:
-            self.axo_uri = _build_axo_uri(self.axo_bucket_id, self.axo_key, self.axo_version)
         return self
+    # @model_validator(mode="after")
+    # def _fill_ids_and_uri(self) -> "MetadataX":
+    #     # IDs: only generate when missing/empty
+    #     # if not self.axo
+    #     # if self.axo
+    #     if self.axo_key is None or self.axo_key == "":
+    #         self.axo_key              = _generate_id(self.axo_key)
+    #     if self.axo_bucket_id is None or self.axo_bucket_id == "":
+    #         self.axo_bucket_id        = _generate_id(self.axo_bucket_id,        size=AXO_ID_SIZE * 2)
+
+    #     if self.axo_sink_bucket_id is None or self.axo_sink_bucket_id =="":
+    #         self.axo_sink_bucket_id   = _generate_id(self.axo_sink_bucket_id,   size=AXO_ID_SIZE * 2)
+    #     if self.axo_source_bucket_id is None or self.axo_source_bucket_id =="":
+    #         self.axo_source_bucket_id = _generate_id(self.axo_source_bucket_id, size=AXO_ID_SIZE * 2)
+
+    #     # Alias (simple, stable)
+    #     if self.axo_alias is None or self.axo_alias =="":
+    #         self.axo_alias = self.axo_alias or str(self.axo_key)
+
+    #     # axo_uri: if caller provided one, trust but validate; else build
+    #     if self.axo_uri:
+    #         b, k, v = self._parse_axo_uri(self.axo_uri)
+    #         # if uri conflicts with fields, prefer explicit fields and rebuild
+    #         if b != self.axo_bucket_id or k != self.axo_key or (v is not None and v != self.axo_version):
+    #             self.axo_uri = _build_axo_uri(self.axo_bucket_id, self.axo_key, self.axo_version)
+    #     else:
+    #         self.axo_uri = _build_axo_uri(self.axo_bucket_id, self.axo_key, self.axo_version)
+    #     return self
 
     # ------------------------------- Methods ---------------------------------
 

@@ -126,7 +126,7 @@ class DistributedRuntime(ActiveXRuntime,Thread):
                 return Err(raw_parts_result.unwrap_err())
             
             attrs, class_code = raw_parts_result.unwrap()
-            print("HREE",attrs)
+            # print("HREE",attrs)
             attrs_put_result = await self.storage_service.put(
                 bucket_id=bucket_id,
                 key = f"{key}_attrs",
@@ -140,7 +140,7 @@ class DistributedRuntime(ActiveXRuntime,Thread):
             if attrs_put_result.is_err:
                 return Err(attrs_put_result.unwrap_err())
 
-            tags = instance._acx_metadata.to_json_with_string_values()
+            tags = instance._acx_metadata.to_tags()
             class_code_put_result = await self.storage_service.put(
                 bucket_id=bucket_id,
                 key = f"{key}_source_code",

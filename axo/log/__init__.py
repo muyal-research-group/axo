@@ -34,14 +34,10 @@ class CSVFormatter(logging.Formatter):
 
         # Handle message
         if isinstance(record.msg, dict):
-            # message = json.dumps(record.msg, separators=(",", ":"))  # compact dict
             event_type = record.msg.get("event","UNKNOWN")
-            # if "event" in record.msg:
-                # del record.msg["event"]
             keys = filter(lambda x: x!="event", list(record.msg.keys()))
             xs = map(lambda x: str(x), map(lambda x:record.msg[x], keys) )
             message = f'{event_type},{",".join(xs)}'
-            # message = ",".join(list(record.msg.values()))
         else:
             message = str(record.getMessage())
         # Build CSV row manually

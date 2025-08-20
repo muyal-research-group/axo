@@ -30,7 +30,8 @@ import zmq
 from option import Err, Ok, Result
 # 
 from axo.storage.metadata import MetadataX
-from axo.models import AxoRequestEnvelope,AxoReplyEnvelope,AxoReplyMsg,Ping,PutMetadata
+from axo.models import AxoRequestEnvelope,AxoReplyEnvelope,AxoReplyMsg,Ping,PutMetadata,MethodExecution
+from axo.enums import AxoOperationType
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -104,8 +105,8 @@ class EndpointX(ABC):
         fname: str,
         ao: Axo,
         # f: GenericFunction | None = None,
-        fargs: list[Any] | None = None,
-        fkwargs: dict[str, Any] | None = None,
+        fargs: list[Any] = [],
+        fkwargs: dict[str, Any] = {},
     ) -> Result[Any, Exception]: ...
 
     @abstractmethod
@@ -272,7 +273,7 @@ class DistributedEndpoint(EndpointX):
                     self._last_ping_at == -1
                     or time.time() - self._last_ping_at >= self._ping_interval
                 ):
-                    self._req.send_multipart([b"axo", b"PING", b"{}"])
+                    self._req.send_multipart(Ping().to_frames() )
                     _ = self._req.recv_multipart()
                     self._last_ping_at = time.time()
                     self._connected = True
@@ -320,8 +321,11 @@ class DistributedEndpoint(EndpointX):
         try:
             msg = PutMetadata(metadata=value)
             self._req.send_multipart(msg.to_frames())
-            res = self._req.recv_multipart()
-            print("PUT_RES",res)
+            frames = self._req.recv_multipart()
+            reply_res = AxoReplyMsg.from_frames(frames=frames,expect_operation=AxoOperationType.PUT_METADATA)
+            if reply_res.is_err:
+                return Err(reply_res.unwrap_err())
+            (reply,_) = reply_res.unwrap()
             return Ok(key)
         except Exception as exc:
             self._cleanup()
@@ -337,39 +341,56 @@ class DistributedEndpoint(EndpointX):
         self,
         *,
         key: str,
+        # version:int
         fname: str,
         ao: Axo,
         # f: GenericFunction | None = None,
-        fargs: list[Any] | None = None,
-        fkwargs: dict[str, Any] | None = None,
+        fargs: list[Any] | None = [],
+        fkwargs: Dict[str, Any] | None = {},
     ) -> Result[Any, Exception]:
         if not self._ensure_connection():
             return Err(Exception("Unable to connect"))
 
-        payload = json.dumps({"key": key, "fname": fname}).encode(self.encoding)
+        # payload = json.dumps({"key": key, "fname": fname}).encode(self.encoding)
         try:
             # print("METHO EXECUTION!",fkwargs,fargs)
             if "storage" in fkwargs:
                 del fkwargs["storage"]
-                
-            self._req.send_multipart(
-                [
-                    b"axo",
-                    b"METHOD.EXEC",
-                    payload,
-                    # cp.dumps(f),
-                    cp.dumps(fargs or []),
-                    cp.dumps(fkwargs or {}),
-                ]
+            msg = MethodExecution(
+                method= fname,
+                fargs=fargs,
+                fkwargs=fkwargs,
+                metadata= ao._acx_metadata,
+
             )
-            resp = self._req.recv_multipart()
-            if len(resp) != 5:
-                return Err(Exception("Unexpected response length"))
-            _, _, status_b, meta_b, result_b = resp
-            status = int.from_bytes(status_b, "little", signed=True)
-            if status < 0:
-                return Err(Exception("Remote execution failed"))
-            return Ok(self._deserialize(result_b))
+            # print("FRAMES",len(frames))
+            self._req.send_multipart(msg.to_frames())
+            frames = self._req.recv_multipart()
+            reply_res = AxoReplyMsg.from_frames(frames=frames,expect_operation=AxoOperationType.METHOD_EXEC)
+            if reply_res.is_err:
+                return Err(reply_res.unwrap_err())
+            (reply,payload) = reply_res.unwrap()
+            f_result = Ok(None)
+            if len(payload) >0:
+                f_result = Ok(cp.loads(payload[0]))
+            return f_result
+            #     [
+            #         b"axo",
+            #         b"METHOD.EXEC",
+            #         payload,
+            #         # cp.dumps(f),
+            #         cp.dumps(fargs or []),
+            #         cp.dumps(fkwargs or {}),
+            #     ]
+            # )
+            # resp = self._req.recv_multipart()
+            # if len(resp) != 5:
+            #     return Err(Exception("Unexpected response length"))
+            # _, _, status_b, meta_b, result_b = resp
+            # status = int.from_bytes(status_b, "little", signed=True)
+            # if status < 0:
+            #     return Err(Exception("Remote execution failed"))
+            # return Ok(self._deserialize(result_b))
         except Exception as exc:
             self._cleanup()
             return Err(exc)
