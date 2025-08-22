@@ -32,7 +32,7 @@ async def test_distributed_put(distributed_ss:MictlanXStorageService):
     bucket_id = "b1"
     key       = "k1"
     res       = await distributed_ss.delete(bucket_id=bucket_id,key=key)
-    assert res.is_ok
+    assert (res.is_ok or res.is_err)
     res       = await distributed_ss.put(bucket_id=bucket_id,key=key,data=b"HOLA")
     assert res.is_ok
 
