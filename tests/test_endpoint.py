@@ -122,16 +122,16 @@ async def test_distributed_endpoint_put_metadata():
 async def test_distributed_endpoint_method_execution():
     endpoint_id = "axo-endpoint-0"
     le          = DistributedEndpoint(endpoint_id=endpoint_id)
-    # with AxoContextManager.distributed(endpoint_manager=DistributedEndpointManager(endpoints={endpoint_id: le} )) as dr: 
-    ao          = Calc(1,
-                    axo_endpoint_id =endpoint_id ,
-                    axo_alias = "ALIAS",
-                    axo_bucket_id= "bao",
-                    axo_key = "aotest"
-    )
-        # res = await ao.persistify()
-        # print(res)
-        # assert res.is_ok
+    with AxoContextManager.distributed(endpoint_manager=DistributedEndpointManager(endpoints={endpoint_id: le} )) as dr: 
+        ao          = Calc(1,
+                        axo_endpoint_id =endpoint_id ,
+                        axo_alias = "ALIAS",
+                        axo_bucket_id= "bao",
+                        axo_key = "aotest"
+        )
+        res = await ao.persistify()
+        assert res.is_ok
+        
     value = ao._acx_metadata
     
     res = le.put(key=value.axo_key, value=value)
