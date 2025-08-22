@@ -34,6 +34,8 @@ jobs:
             sudo mkdir -p /sink
             sudo chown $USER:$USER /sink
             sudo chmod 777 /sink
+            sudo touch /sink/x.pdf  
+            sudo echo "PDF EXAMPLE!" >> /sink/x.pdf
       - name: Create network axo-net (external)
         run: |
           docker network ls --format '{{.Name}}' | grep -qx 'axo-net' || docker network create axo-net
