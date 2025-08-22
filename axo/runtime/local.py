@@ -134,7 +134,10 @@ class LocalRuntime(ActiveXRuntime,Thread):
         try: 
             t1 = T.time()
             key = key or instance.get_axo_key()
-            endpoint:EndpointX = self.endpoint_manager.get_endpoint(instance.get_endpoint_id())
+            e_id = instance.get_endpoint_id()
+            endpoint:EndpointX = self.endpoint_manager.get_endpoint(e_id)
+            if not endpoint:
+                return Err(Exception(f"No endpoint found: {e_id}"))
             meta_res = endpoint.put(key=key, value=instance._acx_metadata)
             if meta_res.is_err:
                 logger.error({
@@ -172,7 +175,7 @@ class LocalRuntime(ActiveXRuntime,Thread):
                 })
                 return Err(attrs_put_result.unwrap_err())
 
-            tags = instance._acx_metadata.to_json_with_string_values()
+            tags = instance._acx_metadata.to_tags()
             class_code_put_result = await self.storage_service.put(
                 bucket_id=bucket_id,
                 key = f"{key}_source_code",

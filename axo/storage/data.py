@@ -111,6 +111,9 @@ class StorageService(ABC):
     ) -> Result[Tuple[ChunkIter, Dict[str, Any]], Exception]:
         """Stream object back as an iterator plus metadata."""
 
+    @abstractmethod
+    async def delete(self,*,bucket_id:str,key:str)->Result[bool, Exception]:
+        ...
     # ------------------------------------------------------------------ #
     # Axo‑specific helpers
     # ------------------------------------------------------------------ #
@@ -160,7 +163,18 @@ class LocalStorageService(StorageService):
         
         self.metadata:Dict[BucketId, Dict[BallId, Metadata]] = {}
 
-
+    def delete(self, *, bucket_id:str, key:str)->Result[bool,Exception]:
+        try:
+            path = f"{self.sink_path}/{bucket_id}/{key}"
+            # os.makedirs(f"{self.sink_path}/{bucket_id}", exist_ok=True)
+            if os.path.exists(path):
+                os.remove(path = path)
+                return Ok(True)
+            else:
+                return Ok(False)
+        except Exception as e:
+            return Err(e)
+        # return super().delete(bucket_id=bucket_id, key=key)
     # -- Bucket‑level metadata ------------------------------------------
     @guard_if_failed(log = logger.debug)
     async def get_bucket_metadata(
@@ -337,6 +351,7 @@ class MictlanXStorageService(StorageService):
         protocol: str = "https",
         max_workers: int = 4,
         log_path: str = "./log",
+        debug:bool = True,
         client: AsyncClient | None = None,
     ) -> None:
         super().__init__(storage_service_id="MictlanX")
@@ -352,11 +367,11 @@ class MictlanXStorageService(StorageService):
             client
             if client is not None
             else AsyncClient(
-                client_id=os.environ.get("MICTLANX_CLIENT_ID", mictlanx_id),
-                routers=routers,
-                max_workers=int(os.environ.get("MICTLANX_MAX_WORKERS", max_workers)),
-                debug=True,
-                log_output_path=os.environ.get("MICTLANX_LOG_OUTPUT_PATH", log_path),
+                client_id       = os.environ.get("MICTLANX_CLIENT_ID", mictlanx_id),
+                routers         = routers,
+                max_workers     = int(os.environ.get("MICTLANX_MAX_WORKERS", max_workers)),
+                debug           = debug,
+                log_output_path = os.environ.get("MICTLANX_LOG_OUTPUT_PATH", log_path),
                 # bucket_id=bucket_id,
             )
         )
@@ -457,6 +472,16 @@ class MictlanXStorageService(StorageService):
         except Exception as exc:
             return Err(exc)
 
+    async def delete(self, *, bucket_id:str, key:str)->Result[bool,Exception]:
+        try:
+            res = await self.client.delete(bucket_id=bucket_id,ball_id=key)
+            if res.is_ok:
+                return Ok(True)
+            return Err(res.unwrap_err())
+            # return res
+        except Exception as e:
+            return Err(e)
+        # return await super().delete(bucket_id=bucket_id, key=key)
     # ------------------------------------------------------------------ #
     # Active‑object helper
     # ------------------------------------------------------------------ #

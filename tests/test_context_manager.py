@@ -67,7 +67,7 @@ async def test_local_cm():
 @pytest.mark.asyncio
 async def test_local_cm_method_execution():
     with AxoContextManager.local() as lrt:
-        c:Calc = Calc(id = "CALC")
+        c:Calc = Calc(id = "CALC",axo_endpoint_id = "axo-endpoint-0")
         res = c.sum(1,2)
         assert res.is_ok
         res = c.substract(1,2)

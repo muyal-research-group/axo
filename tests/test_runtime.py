@@ -22,11 +22,9 @@ async def test_local_runtime():
             storage_service_id="local_ss"
         )
     )
-    x = Hasher(axo_key = "hasher_0")
+    x = Hasher(axo_key = "hasher_0",axo_endpoint_id = "axo-endpoint-0")
     res= await lr.persistify(instance=x)
-    print("RES",res)
     assert res.is_ok
-    # T.sleep(5)
     assert lr.name == runtime_id
 
 @pytest.mark.asyncio

@@ -62,7 +62,7 @@ def test_get_parts():
 
 @pytest.mark.asyncio
 async def test_ao_persistity():
-    dog       = Dog(name="Rory")
+    dog       = Dog(name="Rory",axo_endpoint_id = "axo-endpoint-0")
     with AxoContextManager.local():
         res = await dog.persistify()
         assert res.is_ok
@@ -83,9 +83,12 @@ def test_ao_set_endpoint():
     eid = "e0"
     dog.set_endpoint_id(endpoint_id=eid)
     assert eid == dog.get_endpoint_id()
+
+
+
 def test_ao_call():
     dog_name = "Rory"
-    dog = Dog(name=dog_name)
+    dog = Dog(name=dog_name,axo_endpoint_id="axo-endpoint-0")
     other_dog_name = "REX"
     res = Axo.call(instance=dog, method_name="bark",name=other_dog_name)
     assert res.is_ok

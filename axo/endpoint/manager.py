@@ -66,7 +66,7 @@ class LocalEndpointManager(_BaseEndpointManager,EndpointManagerP[LocalEndpoint])
             return None
         if endpoint_id:
             self.n+= 1 
-            return self.endpoints[endpoint_id]
+            return self.endpoints.get(endpoint_id,None)
         
         return list(self.endpoints.values())[self.n & len(self.endpoints)]
         # next(iter(self.endpoints.values()))  # first/only element
