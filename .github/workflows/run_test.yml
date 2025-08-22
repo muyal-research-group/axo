@@ -33,8 +33,9 @@ jobs:
             sudo chmod 777 /mictlanx
             sudo mkdir -p /sink
             sudo chown $USER:$USER /sink
-            sudo chmod 777 /sink
+            sudo chmod -R 777 /sink
             sudo touch /sink/x.pdf  
+            sudo chmod -R 777 /sink
             sudo echo "PDF EXAMPLE!" >> /sink/x.pdf
       - name: Create network axo-net (external)
         run: |
