@@ -2,7 +2,7 @@ import pytest
 import time as T
 from axo.contextmanager import AxoContextManager
 from axo.endpoint.manager import DistributedEndpointManager
-from axo.storage.data import MictlanXStorageService
+from axo.storage.services import MictlanXStorageService
 from option import Some
 from .objects.scenario1 import HillClimb
 # from .test.objects.scenario1 import *

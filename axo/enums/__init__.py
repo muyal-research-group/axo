@@ -19,6 +19,14 @@ class TaskStatus(Enum):
     CANCELLED = auto()
 
 class AxoErrorType(StrEnum):
+    DELETE_FAILED           = "DELETE_FAILED"
+
+    PUT_DATA_FAILED         = "PUT_DATA_FAILED"
+    PUT_METADATA_FAILED     = "PUT_METADATA_FAILED"
+
+    GET_DATA_FAILED         = "GET_DATA_FAILED"
+    GET_METADATA_FAILED     = "GET_METADATA_FAILED"
+
     BAD_REQUEST             = "BAD_REQUEST"
     UNKNOWN_OPERATION       = "UNKNOWN_OPERATION"
     VALIDATION_FAILED       = "VALIDATION_FAILED"
@@ -36,6 +44,7 @@ class AxoErrorType(StrEnum):
 
 class AxoErrorCode(IntEnum):
     OK                   = 0
+    DELETE_FAILED        = -399
     BAD_REQUEST          = -400
     UNKNOWN_OPERATION    = -404
     VALIDATION_FAILED    = -422
@@ -43,7 +52,13 @@ class AxoErrorCode(IntEnum):
     ALREADY_EXISTS       = -441
     CONCURRENCY_CONFLICT = -460
     TIMEOUT              = -480
+    
     STORAGE_ERROR        = -500
+    PUT_DATA_FAILED   = -501
+    PUT_METADATA_FAILED  = -502
+    GET_DATA_FAILED   = -503
+    GET_METADATA_FAILED  = -504
+
     DEP_INSTALL_FAIL     = -510
     ENDPOINT_COLD        = -520
     NOT_LEADER           = -530

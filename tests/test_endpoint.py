@@ -1,9 +1,24 @@
 import pytest 
+import pytest_asyncio
 from axo.endpoint.endpoint import LocalEndpoint,DistributedEndpoint
 from axo.endpoint.manager import DistributedEndpointManager
 from axo.contextmanager import AxoContextManager
 from axo.core.models import MetadataX
+from axo.storage.services import MictlanXStorageService
 
+@pytest_asyncio.fixture(scope="session", autouse=True)
+# @pytest.mark.asyncio
+async def before_all_tests():
+    ss = MictlanXStorageService(
+        bucket_id   = "b1",
+        protocol    = "http",
+        routers_str = "mictlanx-router-0:localhost:60666"
+    )
+    bids = ["axo","b1","bao"]
+    for bid in bids:
+        res = await ss.client.delete_bucket(bid)
+        print(f"BUCKET [{bid}] was clean")
+    yield
 
 from axo import Axo
 class Calc(Axo):
@@ -17,7 +32,6 @@ class Calc(Axo):
 
 
 
-# @pytest.mark.skip("")
 @pytest.mark.asyncio
 async def test_local_endpoint():
     le = LocalEndpoint(endpoint_id="e1")
@@ -68,14 +82,12 @@ async def test_local_put_get_endpoint():
     res = le.get(key)
     assert res.is_ok
 
-@pytest.mark.skip("")
 @pytest.mark.asyncio
 async def test_distributed_endpoint_ping():
     le = DistributedEndpoint(endpoint_id="activex-endpoint-0")
     res = le.ping()
     assert res.is_ok
 
-@pytest.mark.skip("")
 @pytest.mark.asyncio
 async def test_distributed_endpoint_put_metadata():
     le = DistributedEndpoint(endpoint_id="activex-endpoint-0")
@@ -117,7 +129,6 @@ async def test_distributed_endpoint_put_metadata():
     print("RES",res)
     assert res.is_ok
 
-# @pytest.mark.skip("")
 @pytest.mark.asyncio
 async def test_distributed_endpoint_method_execution():
     endpoint_id = "axo-endpoint-0"

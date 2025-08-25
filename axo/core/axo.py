@@ -41,7 +41,6 @@ import cloudpickle as cp
 from option import Err, Ok, Result
 import humanfriendly as HF
 # ──────────────────────────────────────────────────────────────── project ───
-from axo.utils import serialize_and_yield_chunks
 from axo.log import get_logger
 from axo.core.decorators import axo_method
 from axo.runtime import get_runtime
@@ -266,8 +265,6 @@ class Axo(metaclass=AxoMeta):
             
             # Now safely deserialize the rest
             attrs = cp.loads(raw_parts[0])
-            # methods = cp.loads(raw_parts[1])
-            # class_df = rebuilt_class  # You can also `cp.loads(raw_parts[2])` if needed
 
             return Ok((attrs, code_str))
 

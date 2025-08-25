@@ -49,11 +49,11 @@ class Calc(Axo):
 def dem():
     x = DistributedEndpointManager()
     x.add_endpoint(
-        endpoint_id="axo-endpoint-0",
-        hostname="localhost",
-        protocol="tcp",
-        pubsub_port=16666,
-        req_res_port=16667,
+        endpoint_id  = "axo-endpoint-0",
+        hostname     = "localhost",
+        protocol     = "tcp",
+        pubsub_port  = 16666,
+        req_res_port = 16667,
     )
     return x
 
@@ -62,12 +62,12 @@ async def test_local_cm():
     lcm = AxoContextManager.local()
     assert not lcm.runtime.is_distributed
     lcm.stop()
-    lcm.stop()
 
 @pytest.mark.asyncio
 async def test_local_cm_method_execution():
     with AxoContextManager.local() as lrt:
         c:Calc = Calc(id = "CALC",axo_endpoint_id = "axo-endpoint-0")
+        await c.persistify()
         res = c.sum(1,2)
         assert res.is_ok
         res = c.substract(1,2)
@@ -107,7 +107,6 @@ async def test_local_cm_local_runtime():
         assert not lrt.is_distributed
         current_rt = get_runtime()
         assert isinstance(current_rt,LocalRuntime)
-# @pytest.mark.skip("")
 @pytest.mark.asyncio
 async def test_init_cm_none():
     with AxoContextManager(runtime=None) as drt:

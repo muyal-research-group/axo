@@ -1,7 +1,7 @@
 import pytest 
 import time as T
 from axo.runtime.local import LocalRuntime
-from axo.storage.data import LocalStorageService
+from axo.storage.services import LocalStorageService
 from axo import Axo,axo_method
 import hashlib as H
 

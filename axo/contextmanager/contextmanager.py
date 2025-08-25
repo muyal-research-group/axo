@@ -5,7 +5,7 @@ from axo.runtime.runtime import ActiveXRuntime
 # 
 from axo.endpoint.manager import DistributedEndpointManager
 # 
-from axo.storage.data import StorageService,LocalStorageService
+from axo.storage.services import StorageService,LocalStorageService
 # 
 from axo.scheduler import AxoScheduler
 #

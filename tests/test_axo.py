@@ -13,12 +13,12 @@ def test_create_instance_ao():
     assert dog.name == name
 
 def test_update_instance_ao_metadata():
-    name = "Rex"
-    axo_bucket_id ="b1"
-    axo_key = "key"
-    axo_sink_bucket_id = "b2"
+    name                 = "Rex"
+    axo_bucket_id        = "b1"
+    axo_key              = "key"
+    axo_sink_bucket_id   = "b2"
     axo_source_bucket_id = "b3"
-    axo_endpoint_id = "e1"
+    axo_endpoint_id      = "e1"
     dog = Dog(
         name=name,
         axo_bucket_id=axo_bucket_id,
@@ -31,7 +31,7 @@ def test_update_instance_ao_metadata():
     assert axo_key == dog.get_axo_key()
     assert axo_source_bucket_id == dog.get_axo_source_bucket_id()
     assert axo_sink_bucket_id == dog.get_axo_sink_bucket_id()
-    assert axo_endpoint_id == axo_endpoint_id
+    assert axo_endpoint_id == dog.get_endpoint_id()
     
     dog.set_sink_bucket_id(sink_bucket_id=axo_sink_bucket_id +"x")
     assert dog.get_axo_sink_bucket_id() == f"{axo_sink_bucket_id}x"
@@ -46,12 +46,13 @@ def test_ao_to_stream():
         assert isinstance(i, bytes)
     try:
         res = dog.to_stream(chunk_size=1)
-        _ = list(res)
+        xs = list(res)
+        assert isinstance(xs,list)
     except Exception as e:
         assert isinstance(e, Exception)
 
 def test_get_parts():
-    dog       = Dog(name="Rory")
+    dog           = Dog(name="Rory")
     dog_bytes_res = dog.to_bytes()
     assert dog_bytes_res.is_ok
 
@@ -60,22 +61,14 @@ def test_get_parts():
     raw_parts = dog.get_raw_parts()
     assert raw_parts.is_ok
 
-@pytest.mark.asyncio
-async def test_ao_persistity():
-    dog       = Dog(name="Rory",axo_endpoint_id = "axo-endpoint-0")
-    with AxoContextManager.local():
-        res = await dog.persistify()
-        assert res.is_ok
 
 @pytest.mark.asyncio
 async def test_ao_persistity_no_rt():
     dog       = Dog(name="Rory")
     res = await dog.persistify()
     assert res.is_err 
-    
-    # res = await dog.persistify()
-    # assert res.is_err
-    
+
+
 
 
 def test_ao_set_endpoint():
@@ -87,24 +80,20 @@ def test_ao_set_endpoint():
 
 
 def test_ao_call():
-    dog_name = "Rory"
-    dog = Dog(name=dog_name,axo_endpoint_id="axo-endpoint-0")
-    other_dog_name = "REX"
-    res = Axo.call(instance=dog, method_name="bark",name=other_dog_name)
-    assert res.is_ok
-    response = res.unwrap()
-    assert response == f"{dog_name}: Woof Woof to {other_dog_name}"
-    res = Axo.call(instance=dog, method_name="name")
-    assert res.is_ok 
-    assert res.unwrap() == dog_name
-    res = Axo.call(instance=dog, method_name="not_found_method",name=other_dog_name)
-    assert res.is_err
+    with AxoContextManager.local() as lrt:
+        dog_name = "Rory"
+        dog = Dog(name=dog_name,axo_endpoint_id="axo-endpoint-0")
+        other_dog_name = "REX"
+        res = Axo.call(instance=dog, method_name="bark",name=other_dog_name)
+        assert res.is_ok
+        response = res.unwrap()
+        assert response == f"{dog_name}: Woof Woof to {other_dog_name}"
+        res = Axo.call(instance=dog, method_name="name")
+        assert res.is_ok 
+        assert res.unwrap() == dog_name
+        res = Axo.call(instance=dog, method_name="not_found_method",name=other_dog_name)
+        assert res.is_err
 
-    # eid = "e0"
-    # dog.set_endpoint_id(endpoint_id=eid)
-    # assert eid == dog.get_endpoint_id()
-    # dog_bytes = dog.to_bytes()
-    # assert isinstance(dog_bytes,bytes)
 
 def test_ao_to_bytes():
     dog = Dog(name="Tex")

@@ -1,8 +1,24 @@
 import pytest
+import pytest_asyncio
 from axo import Axo,axo_method
 from axo.contextmanager import AxoContextManager
 from axo.endpoint.manager import DistributedEndpointManager
+from axo.storage.services import MictlanXStorageService
 
+
+@pytest_asyncio.fixture(scope="session", autouse=True)
+# @pytest.mark.asyncio
+async def before_all_tests():
+    ss = MictlanXStorageService(
+        bucket_id   = "b1",
+        protocol    = "http",
+        routers_str = "mictlanx-router-0:localhost:60666"
+    )
+    bids = ["axo","b1","bao","baox"]
+    for bid in bids:
+        res = await ss.client.delete_bucket(bid)
+        print(f"BUCKET [{bid}] was clean")
+    yield
 class Calculator(Axo):
     from typing import List
     @axo_method
@@ -40,19 +56,14 @@ def dem():
     return dem
 
 
-@pytest.mark.skip("")
+# @pytest.mark.asyncio
 def test_local():
-    # dem = AxoContextManager.local()
     with AxoContextManager.local() as cmx:
         c:Calculator = Calculator()
-
         res = c.sum([0,1,2])
-
-
         print(res)
 
 
-# @pytest.mark.skip("")
 @pytest.mark.asyncio
 async def test_distributed(dem:DistributedEndpointManager):
     with AxoContextManager.distributed( endpoint_manager= dem) as cmx:
@@ -60,9 +71,6 @@ async def test_distributed(dem:DistributedEndpointManager):
         c:Calculator = Calculator(axo_endpoint_id = "axo-endpoint-0")
         
         res = await c.persistify()
-        print("RESULT",res)
-        print("BUCKET_ID",c.get_axo_bucket_id())
-        print("KEY",c.get_axo_key())
         assert res.is_ok
         res = c.sum([0,1,2])
         print(res)
@@ -73,9 +81,18 @@ async def test_distributed(dem:DistributedEndpointManager):
         res = c.divide([3,2,1])
         print(res)
 
-@pytest.mark.skip("")
 @pytest.mark.asyncio
 async def test_get_ao(dem:DistributedEndpointManager):
     with AxoContextManager.distributed( endpoint_manager= dem) as cmx:
-        ao = await Axo.get_by_key(bucket_id="4x49uwyb36ilu00qsg6uqyrq5x8da46z",key="utpxerpeihgx8udm")
+        axo_key       = "akeyx"
+        axo_bucket_id = "baox"
+        c:Calculator = Calculator(
+            axo_endpoint_id = "axo-endpoint-0",
+            axo_key         = axo_key,
+            axo_bucket_id   = axo_bucket_id
+        )
+        res = await c.persistify()
+        assert res.is_ok
+        ao = await Axo.get_by_key(bucket_id=axo_bucket_id,key=axo_key )
         print(ao)
+        assert ao.is_ok

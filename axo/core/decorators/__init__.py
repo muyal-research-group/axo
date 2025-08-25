@@ -40,11 +40,12 @@ import wrapt
 # 
 from axo.log import get_logger
 # 
-from axo.storage.data import LocalStorageService
+# from axo.storage.data import LocalStorageService
 # 
-from axo.runtime.local import LocalRuntime
+# from axo.runtime.local import LocalRuntime
 from axo.runtime import set_runtime,get_runtime
 from axo.protocols import AxoLike
+from axo.errors import AxoError,AxoErrorType
 
 logger = get_logger(name=__name__)
 R = TypeVar("R")  # generic return type for Axo.call
@@ -52,12 +53,12 @@ R = TypeVar("R")  # generic return type for Axo.call
 # Decorators
 # =========================================================================== #
 # @wrapt.decorator
-def _make_local_runtime() -> LocalRuntime:
-    suffix = nanoid(alphabet=string.ascii_lowercase + string.digits)
-    return LocalRuntime(
-        runtime_id=f"local-{suffix}",
-        storage_service=LocalStorageService(storage_service_id=f"local-storage-{suffix}")
-    )
+# def _make_local_runtime() -> LocalRuntime:
+#     suffix = nanoid(alphabet=string.ascii_lowercase + string.digits)
+#     return LocalRuntime(
+#         runtime_id=f"local-{suffix}",
+#         storage_service=LocalStorageService(storage_service_id=f"local-storage-{suffix}")
+#     )
 
 def axo_method(wrapped: Callable[..., R]) -> Callable[..., Result[R, Exception]]:
     @wrapt.decorator
@@ -67,8 +68,9 @@ def axo_method(wrapped: Callable[..., R]) -> Callable[..., Result[R, Exception]]
             rt = get_runtime()
             if rt is None:
                 logger.warning({"event":"RUNTIME.NOT.STARTED", "mode":"LOCAL"})
-                set_runtime(_make_local_runtime())
-                rt = get_runtime()
+                return Err(AxoError.make(error_type=AxoErrorType.INTERNAL_ERROR, msg="No runtime started"))
+                # set_runtime(_make_local_runtime())
+                # rt = get_runtime()
 
 
 
