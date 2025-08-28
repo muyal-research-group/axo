@@ -12,4 +12,5 @@ tests/out
 **/*.rar
 .coverage
 htmlcov/
-.svg
+*.svg
+*.json
