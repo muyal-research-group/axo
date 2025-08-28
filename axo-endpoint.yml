@@ -1,6 +1,6 @@
 services:
     activex-endpoint-0:
-        image: nachocode/axo:endpoint-0.0.2
+        image: nachocode/axo:endpoint-0.0.3a0
         container_name: axo-endpoint-0
         ports:
                 - 16666:16666
@@ -11,7 +11,7 @@ services:
                 - AXO_LOGGER_PATH=/log
                 - AXO_LOGGER_WHEN=h
                 - AXO_LOGGER_INTERVAL=24
-                - AXO_ENDPOINT_IMAGE=nachocode/axo:endpoint-0.0.2
+                - AXO_ENDPOINT_IMAGE=nachocode/axo:endpoint-0.0.3a0
                 - AXO_PROTOCOL=tcp
                 - AXO_PUB_SUB_PORT=16666
                 - AXO_REQ_RES_PORT=16667
@@ -19,7 +19,8 @@ services:
                 - AXO_ENDPOINTS=
                 - AXO_SOURCE_PATH=/source
                 - AXO_SINK_PATH=/sink
-                # MictlanX
+                - AXO_GOSSIP_SEEDS=tcp://localhost:7777
+                - AXO_GOSSIP_PORT=7778
                 - MICTLANX_CLIENT_ID=axo-mictlanx-0
                 - MICTLANX_BUCKET_ID=axo
                 - MICTLANX_DEBUG=0
