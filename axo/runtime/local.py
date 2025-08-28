@@ -17,25 +17,24 @@ Because everything runs in‑process, no network calls are performed, making
 """
 
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING,Dict,Any
 from weakref import WeakKeyDictionary
 import time as T
 from queue import Queue
 from threading import Thread
 # 
-import cloudpickle as CP
 from option import Result,Ok,Err
-# 
 
-if TYPE_CHECKING:
-    from axo.core.axo import Axo  # only for type hints; not executed at runtime
+from axo.core.axo import Axo,axo_method
 from axo.endpoint.manager import LocalEndpointManager,EndpointManagerP
-from axo.endpoint.endpoint import EndpointX
 from axo.runtime.runtime import ActiveXRuntime
 from axo.scheduler import AxoScheduler,Scheduler
 from axo.storage.services import StorageService,LocalStorageService
+from axo.storage.loader import AxoLoader
+from axo.storage import AxoStorage
 from axo.log import get_logger
 from axo.models import Task
+from axo.errors import AxoError,AxoErrorType
 # --------------------------------------------------------------------------- #
 # Logger (module‑local)
 # --------------------------------------------------------------------------- #
@@ -70,6 +69,8 @@ class LocalRuntime(ActiveXRuntime,Thread):
         # is_distributed: bool = False,
         maxsize: int = 100,
         q_tick_s:int = 1,
+        loader_api_globals: Dict[str,Any] = {},
+        # safe_builtins: dict | None = None,
     ) -> None:
         super().__init__(name=runtime_id,daemon=True)
         self.__runtime_id = runtime_id
@@ -82,6 +83,12 @@ class LocalRuntime(ActiveXRuntime,Thread):
 
         # Storage backend (provided or default) ----------------------------
         self.__storage_service: StorageService = storage_service
+        self.__axo_storage = AxoStorage(storage=self.__storage_service)
+        self.__axo_loader = AxoLoader(
+            storage=self.__axo_storage,
+            api_globals={**loader_api_globals,"Axo":Axo,"axo_method":axo_method} or {},
+            safe_builtins={},
+        )
         self.__inmemory_objects = WeakKeyDictionary()
         # .unwrap_or(
             # LocalStorageService(storage_service_id="local-store")
@@ -116,82 +123,57 @@ class LocalRuntime(ActiveXRuntime,Thread):
     def inmemory_objects(self)->WeakKeyDictionary[Axo,None]:
         return self.__inmemory_objects
     @property
+    def axo_storage(self) -> AxoStorage: return self.__axo_storage
+    @property
+    def axo_loader(self) -> AxoLoader: return self.__axo_loader
+
+    @property
     def is_running(self)->bool:
         return self.__is_running  
-    def get_active_object(self, *, bucket_id, key):
-        return self.storage_service.get( key=key, bucket_id=bucket_id)
-        # return super().get_active_object(bucket_id=bucket_id, key=key)
+    async def get_active_object(self, *, bucket_id: str, key: str) -> Result[Axo, AxoError]:
+        return await self.__axo_loader.load_object(bucket_id=bucket_id, key=key)
 
-    async def persistify(self, instance:Axo, *, bucket_id = "axo", key = None)->Result[str,Exception]:
-        try: 
+
+    async def persistify(self, instance: Axo, *, bucket_id: str = "axo", key: str | None = None) -> Result[str, AxoError]:
+        try:
             t1 = T.time()
             key = key or instance.get_axo_key()
-            e_id = instance.get_endpoint_id()
-            endpoint:EndpointX = self.endpoint_manager.get_endpoint(e_id)
+
+            # 1) store endpoint metadata (unchanged behavior)
+            endpoint = self.__endpoint_manager.get_endpoint(instance.get_endpoint_id())
             if not endpoint:
-                return Err(Exception(f"No endpoint found: {e_id}"))
+                return Err(AxoError.make(AxoErrorType.NOT_FOUND, f"No endpoint found: {instance.get_endpoint_id()}"))
             meta_res = endpoint.put(key=key, value=instance._acx_metadata)
             if meta_res.is_err:
-                logger.error({
-                    "error":str(meta_res.unwrap_err())
-                })
-                return Err(meta_res.unwrap_err())
-            logger.info({
-                "event":"ENDPOINT.PUT",
-                "mode":"LOCAL",
-                "endpoint_id":endpoint.endpoint_id, 
-                "axo_bucket_id":instance.get_axo_bucket_id(),
-                "axo_key":instance.get_axo_key(),
-                "service_time":T.time() - t1
-            })
-            # 2) class definition
-            raw_parts_res = instance.get_raw_parts()
-            if raw_parts_res.is_err:
-                return Err(raw_parts_res.unwrap_err())
-            
-            attrs,class_code = raw_parts_res.unwrap()
+                return Err(AxoError.make(AxoErrorType.INTERNAL_ERROR, str(meta_res.unwrap_err())))
 
-            t1 = T.time()
-            attrs_put_result = await self.storage_service.put(
-                bucket_id=bucket_id,
-                key = f"{key}_attrs",
-                tags = {
-                    "module": instance._acx_metadata.axo_module,
-                    "class_name": instance._acx_metadata.axo_class_name,
-                }, 
-                data =CP.dumps(attrs)
-            )
-            if attrs_put_result.is_err:
-                logger.error({
-                    "error":str(attrs_put_result.unwrap_err())
-                })
-                return Err(attrs_put_result.unwrap_err())
+            # 2) build blobs + store via AxoStorage
+            blobs_res = self._build_blobs_from_instance(instance, bucket_id=bucket_id, key=key)
+            if blobs_res.is_err:
+                return Err(blobs_res.unwrap_err())
+            blobs, class_name = blobs_res.unwrap()
 
-            tags = instance._acx_metadata.to_tags()
-            class_code_put_result = await self.storage_service.put(
+            put_res = await self.__axo_storage.put_blobs(
                 bucket_id=bucket_id,
-                key = f"{key}_source_code",
-                tags = {
-                    **tags
-                }, 
-                data = CP.dumps(class_code.encode("utf-8"))
+                key=key,
+                blobs=blobs,
+                class_name=class_name,
             )
-            if class_code_put_result.is_err:
-                return Err(class_code_put_result.unwrap_err())  
-            
-            
+            if put_res.is_err:
+                return Err(put_res.unwrap_err())
+
             logger.info({
-                "event":"ENDPOINT.PUT",
-                "mode":"LOCAL",
-                "endpoint_id":endpoint.endpoint_id, 
-                "axo_bucket_id":instance.get_axo_bucket_id(),
-                "axo_key":instance.get_axo_key(),
-                "service_time":T.time() - t1
+                "event": "PERSISTIFY",
+                "mode": "LOCAL",
+                "bucket_id": bucket_id,
+                "key": key,
+                "response_time":T.time() - t1
             })
             return Ok(key)
+        except AxoError as ax:
+            return Err(ax)
         except Exception as e:
-            return Err(e)
-        # return Err(Exception("Incompleted implementation"))
+            return Err(AxoError.make(AxoErrorType.INTERNAL_ERROR, f"persistify failed: {e}"))
 
         # return super().persistify(instance, bucket_id=bucket_id, key=key)
     def _handle_put_task(self, task):
