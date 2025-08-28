@@ -31,12 +31,16 @@ jobs:
             sudo mkdir -p /mictlanx
             sudo chown $USER:$USER /mictlanx
             sudo chmod 777 /mictlanx
+
             sudo mkdir -p /sink
             sudo chown $USER:$USER /sink
             sudo chmod -R 777 /sink
             sudo touch /sink/x.pdf  
             sudo chmod -R 777 /sink
             sudo echo "PDF EXAMPLE!" >> /sink/x.pdf
+            sudo mkdir -p /axo
+            sudo chown $USER:$USER /axo
+            sudo chmod -R 777 /axo
       - name: Create network axo-net (external)
         run: |
           docker network ls --format '{{.Name}}' | grep -qx 'axo-net' || docker network create axo-net
