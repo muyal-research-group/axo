@@ -28,21 +28,16 @@ from threading import Thread
 from typing import List
 import humanfriendly as HF
 
-import axo.utils as utilx
+# import axo.utils as utilx
 from axo.tasks.manager import TasksManager
 from axo.models import Task
+from axo.log import get_logger
 
 # --------------------------------------------------------------------------- #
 # Logger
 # --------------------------------------------------------------------------- #
-logger = logging.getLogger(__name__)
-if not logger.handlers:
-    _h = logging.StreamHandler()
-    _h.setFormatter(
-        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    )
-    logger.addHandler(_h)
-logger.setLevel(logging.DEBUG)
+# AXO_LOG_PATH = 
+logger = get_logger(name=__name__, ltype="JSON",debug=True)
 
 
 # ============================================================================
@@ -192,7 +187,7 @@ class AxoScheduler(Scheduler):
     def _handle_put(self, task: Task, now: float) -> None:
         """Handle a PUT task (upload a file)."""
         path = task.metadata.get("path")
-        if path and os.path.exists(path) and not utilx.is_writing(path):
+        if path and os.path.exists(path):
             logger.debug("SCHEDULER.FORWARD.PUT id=%s path=%s", task.id, path)
             self.runtime_queue.put(
                 Task(
