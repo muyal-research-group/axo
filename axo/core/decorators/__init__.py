@@ -75,7 +75,6 @@ def axo_method(wrapped: Callable[..., R]) -> Callable[..., Result[R, Exception]]
 
 
             e_id = kwargs.get("axo_endpoint_id", instance.get_endpoint_id()) 
-
             ep = rt.endpoint_manager.get_endpoint(e_id)
             
             instance.set_endpoint_id(ep.endpoint_id)
@@ -88,10 +87,10 @@ def axo_method(wrapped: Callable[..., R]) -> Callable[..., Result[R, Exception]]
             # is_distributed =  rt.get_is_distributed
             if not rt.is_distributed:
                 kwargs.setdefault("storage", rt.storage_service)
-            
             if rt.is_distributed and instance._acx_local:
                 return Err(Exception("First you must persistify the object."))
             fname = wrapped_func.__name__
+            print(instance.get_axo_bucket_id(), instance.get_axo_key())
             res = ep.method_execution(
                 key     = instance.get_axo_key(),
                 fname   = fname,
@@ -99,6 +98,7 @@ def axo_method(wrapped: Callable[..., R]) -> Callable[..., Result[R, Exception]]
                 fargs   = args,
                 fkwargs = kwargs,
             )
+            # print("RES",res)
             logger.info({
                 "event": "METHOD.EXEC",
                 "mode":"DISTRIBUTED" if rt.is_distributed else "LOCAL",
@@ -106,6 +106,10 @@ def axo_method(wrapped: Callable[..., R]) -> Callable[..., Result[R, Exception]]
                 "ok": res.is_ok,
                 "response_time": T.time() - t1,  # update this properly
             })
+            # if res.is_ok:S
+                # result = res.unwrap()
+                # if isinstance(result, Result):
+                    # return Ok(result.unwrap())
             return res
         except Exception as e:
             logger.error(f"METHOD.EXEC failed: {e}")
