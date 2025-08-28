@@ -3,7 +3,7 @@ from axo.storage import AxoStorage
 from axo.storage.types import AxoObjectBlobs,AxoStorageMetadata,AxoObjectBlob
 from axo.storage.services import LocalStorageService
 from axo.errors import AxoErrorType
-from axo.runtime.loader import AxoLoader  
+from axo.storage.loader import AxoLoader  
 from axo.storage.utils import StorageUtils as SU
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def make_blobs_for_class(base_key: str, bucket_id: str, class_name: str, *, gree
     # Source defines a class that consumes "greeting" from attrs
     source = f"""
 class {class_name}:
-    def __init__(self, greeting: str):
+    def __init__(self, greeting: str,**kwargs):
         self.greeting = greeting
     def greet(self, name: str) -> str:
         return f"{{self.greeting}}, {{name}}"

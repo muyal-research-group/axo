@@ -5,6 +5,7 @@ from axo.endpoint.manager import DistributedEndpointManager
 from axo.contextmanager import AxoContextManager
 from axo.core.models import MetadataX
 from axo.storage.services import MictlanXStorageService
+from axo.storage.types import StorageService
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
 # @pytest.mark.asyncio
@@ -30,7 +31,10 @@ class Calc(Axo):
         return x+y
 
 
-
+@pytest.fixture
+def storage_service() -> StorageService:
+    return MictlanXStorageService(protocol="http")
+# 
 
 @pytest.mark.asyncio
 async def test_local_endpoint():
@@ -130,10 +134,10 @@ async def test_distributed_endpoint_put_metadata():
     assert res.is_ok
 
 @pytest.mark.asyncio
-async def test_distributed_endpoint_method_execution():
+async def test_distributed_endpoint_method_execution(storage_service:StorageService):
     endpoint_id = "axo-endpoint-0"
     le          = DistributedEndpoint(endpoint_id=endpoint_id)
-    with AxoContextManager.distributed(endpoint_manager=DistributedEndpointManager(endpoints={endpoint_id: le} )) as dr: 
+    with AxoContextManager.distributed(endpoint_manager=DistributedEndpointManager(endpoints={endpoint_id: le} ), storage_service=storage_service) as dr: 
         ao          = Calc(1,
                         axo_endpoint_id =endpoint_id ,
                         axo_alias = "ALIAS",

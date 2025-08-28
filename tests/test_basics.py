@@ -4,7 +4,8 @@ from axo import Axo,axo_method
 from axo.contextmanager import AxoContextManager
 from axo.endpoint.manager import DistributedEndpointManager
 from axo.storage.services import MictlanXStorageService
-
+from axo.storage.services import StorageService
+from axo.storage import AxoStorage
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
 # @pytest.mark.asyncio
@@ -55,6 +56,14 @@ def dem():
     )
     return dem
 
+@pytest.fixture
+def storage_service() -> StorageService:
+    return MictlanXStorageService(protocol="http")
+# 
+# @pytest.fixture
+# def axo_storage(storage_service):
+    # return AxoStorage(storage=storage_service)
+
 
 # @pytest.mark.asyncio
 def test_local():
@@ -65,8 +74,8 @@ def test_local():
 
 
 @pytest.mark.asyncio
-async def test_distributed(dem:DistributedEndpointManager):
-    with AxoContextManager.distributed( endpoint_manager= dem) as cmx:
+async def test_distributed(dem:DistributedEndpointManager,storage_service:StorageService):
+    with AxoContextManager.distributed( endpoint_manager= dem, storage_service=storage_service) as cmx:
         
         c:Calculator = Calculator(axo_endpoint_id = "axo-endpoint-0")
         
@@ -82,8 +91,8 @@ async def test_distributed(dem:DistributedEndpointManager):
         print(res)
 
 @pytest.mark.asyncio
-async def test_get_ao(dem:DistributedEndpointManager):
-    with AxoContextManager.distributed( endpoint_manager= dem) as cmx:
+async def test_get_ao(dem:DistributedEndpointManager,storage_service:StorageService):
+    with AxoContextManager.distributed( endpoint_manager= dem,storage_service=storage_service) as cmx:
         axo_key       = "akeyx"
         axo_bucket_id = "baox"
         c:Calculator = Calculator(
@@ -91,8 +100,14 @@ async def test_get_ao(dem:DistributedEndpointManager):
             axo_key         = axo_key,
             axo_bucket_id   = axo_bucket_id
         )
+        # print("AXO_KEY",a)
         res = await c.persistify()
         assert res.is_ok
         ao = await Axo.get_by_key(bucket_id=axo_bucket_id,key=axo_key )
-        print(ao)
         assert ao.is_ok
+        calc = ao.unwrap()
+        # print("CALC",calc)
+        sum_res = calc.sum([1,2])
+        assert sum_res.is_ok
+        sum_result = sum_res.unwrap()
+        assert sum_result == 3

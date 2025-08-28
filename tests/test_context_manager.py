@@ -3,9 +3,9 @@ import time as T
 from axo.contextmanager import AxoContextManager
 from axo.runtime import get_runtime,set_runtime
 from axo.runtime.local import LocalRuntime
-from axo.runtime.distributed import DistributedRuntime
 from axo.endpoint.manager import DistributedEndpointManager
-# from axo.contextmanager
+from axo.storage.types import StorageService
+from axo.storage.services import MictlanXStorageService
 from axo import Axo,axo_method
 
 class Calc(Axo):
@@ -43,7 +43,10 @@ class Calc(Axo):
     def get_info(self):
         print(f"Hola soy una Calculadora mi nombre es {self.id}")
 
-
+@pytest.fixture
+def storage_service() -> StorageService:
+    return MictlanXStorageService(protocol="http")
+# 
 
 @pytest.fixture()
 def dem():
@@ -78,8 +81,8 @@ async def test_local_cm_method_execution():
         assert res.is_ok
 
 @pytest.mark.asyncio
-async def test_distributed_cm_method_execution(dem:DistributedEndpointManager):
-    with AxoContextManager.distributed(endpoint_manager=dem) as drt:
+async def test_distributed_cm_method_execution(dem:DistributedEndpointManager,storage_service:StorageService):
+    with AxoContextManager.distributed(endpoint_manager=dem,storage_service=storage_service) as drt:
         c:Calc = Calc(id = "CALC",axo_endpoint_id = "axo-endpoint-0")
         res = await c.persistify()
         assert res.is_ok
@@ -124,8 +127,8 @@ async def test_stop_a_running_cm():
         assert not drt.is_running
         # assert not drt.is_distributed
 @pytest.mark.asyncio
-async def test_distributed_cm():
-    with AxoContextManager.distributed(endpoint_manager=DistributedEndpointManager()) as drt:
+async def test_distributed_cm(storage_service:StorageService):
+    with AxoContextManager.distributed(endpoint_manager=DistributedEndpointManager(),storage_service=storage_service) as drt:
         assert drt.is_distributed
 
 # @pytest.mark.asyncio
