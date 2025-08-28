@@ -29,9 +29,9 @@ import humanfriendly as hf
 import zmq
 from option import Err, Ok, Result
 # 
-from axo.storage.metadata import MetadataX
 from axo.models import AxoRequestEnvelope,AxoReplyEnvelope,AxoReplyMsg,Ping,PutMetadata,MethodExecution
 from axo.enums import AxoOperationType
+from axo.storage.types import AxoStorageMetadata
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -92,10 +92,10 @@ class EndpointX(ABC):
     # CRUD + RPC interface
     # ------------------------------------------------------------------ #
     @abstractmethod
-    def put(self, key: str, value: MetadataX) -> Result[str, Exception]: ...
+    def put(self, key: str, value: AxoStorageMetadata) -> Result[str, Exception]: ...
 
     @abstractmethod
-    def get(self, key: str) -> Result[MetadataX, Exception]: ...
+    def get(self, key: str) -> Result[AxoStorageMetadata, Exception]: ...
 
     @abstractmethod
     def method_execution(
@@ -134,14 +134,14 @@ class LocalEndpoint(EndpointX):
 
     def __init__(self, endpoint_id: str = "axo-endpoint-0") -> None:
         super().__init__(endpoint_id=endpoint_id)
-        self._db: Dict[str, MetadataX] = {}
+        self._db: Dict[str, AxoStorageMetadata] = {}
 
     # -- CRUD ------------------------------------------------------------
-    def put(self, key: str, value: MetadataX) -> Result[str, Exception]:
+    def put(self, key: str, value: AxoStorageMetadata) -> Result[str, Exception]:
         self._db.setdefault(key, value)
         return Ok(key)
 
-    def get(self, key: str) -> Result[MetadataX, Exception]:
+    def get(self, key: str) -> Result[AxoStorageMetadata, Exception]:
         return Ok(self._db[key]) if key in self._db else Err(Exception("Not found"))
 
     # -- Remote method execution (trivial in local mode) -----------------
@@ -313,7 +313,7 @@ class DistributedEndpoint(EndpointX):
     # ------------------------------------------------------------------ #
     # CRUD
     # ------------------------------------------------------------------ #
-    def put(self, key: str, value: MetadataX) -> Result[str, Exception]:
+    def put(self, key: str, value: AxoStorageMetadata) -> Result[str, Exception]:
         if not self._ensure_connection():
             return Err(Exception("Unable to connect"))
 
@@ -331,7 +331,7 @@ class DistributedEndpoint(EndpointX):
             self._cleanup()
             return Err(exc)
 
-    def get(self, key: str) -> Result[MetadataX, Exception]:
+    def get(self, key: str) -> Result[AxoStorageMetadata, Exception]:
         return Err(Exception("GET not implemented yet"))
 
     # ------------------------------------------------------------------ #

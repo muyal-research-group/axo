@@ -64,11 +64,11 @@ class LocalEndpointManager(_BaseEndpointManager,EndpointManagerP[LocalEndpoint])
         # Always return the requested ID (or the *only* one we have)
         if len(self.endpoints) ==0:
             return None
-        if endpoint_id:
+        if endpoint_id in self.endpoints:
             self.n+= 1 
-            return self.endpoints.get(endpoint_id,None)
-        
-        return list(self.endpoints.values())[self.n & len(self.endpoints)]
+            return self.endpoints.get(endpoint_id)
+        print("ENDPOITNS",self.endpoints)
+        return list(self.endpoints.values())[self.n % len(self.endpoints)]
         # next(iter(self.endpoints.values()))  # first/only element
 
 
