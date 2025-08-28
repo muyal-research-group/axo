@@ -11,7 +11,6 @@ from axo.scheduler import AxoScheduler
 #
 from axo.log import get_logger
 
-from option import Option,NONE
 from typing import Optional,Union
 from nanoid import generate as nanoid
 from queue import Queue
@@ -26,19 +25,21 @@ class AxoContextManager:
         self.is_running = True
 
     @staticmethod
-    def local()->'AxoContextManager':
+    def local( 
+        storage_service:Optional[StorageService] = None,
+    )->'AxoContextManager':
         suffix = nanoid(alphabet=string.ascii_lowercase+string.digits)
         return AxoContextManager(
             runtime= LocalRuntime(
                 runtime_id      = "local-{}".format(suffix),
-                storage_service = LocalStorageService(storage_service_id=f"local-storage-{suffix}")
+                storage_service = LocalStorageService(storage_service_id=f"local-storage-{suffix}") if not storage_service else storage_service
             )
         )
         
     @staticmethod
     def distributed(
         endpoint_manager:DistributedEndpointManager,
-        storage_service:Option[StorageService] = NONE,
+        storage_service:StorageService,
         maxsize:int =100
     )->'AxoContextManager':
         runtime_id = "distributed-{}".format(nanoid(alphabet=string.ascii_lowercase+string.digits))
