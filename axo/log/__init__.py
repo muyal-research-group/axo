@@ -43,7 +43,7 @@ class CSVFormatter(logging.Formatter):
         # Build CSV row manually
         csv_line = f'{timestamp},{level},{logger_name},{thread_name},{message}'
         return csv_line
-
+    
 class Log(logging.Logger):
     def __init__(self,
                  formatter:logging.Formatter=JsonFormatter(),
