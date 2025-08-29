@@ -10,7 +10,7 @@ import io
 
 class JsonFormatter(logging.Formatter):
     def format(self, record):
-        thread_id = threading.current_thread().getName()
+        thread_id = threading.current_thread().name
         log_data = {
             'timestamp': self.formatTime(record),
             'level': record.levelname,
@@ -30,7 +30,7 @@ class CSVFormatter(logging.Formatter):
         timestamp   = self.formatTime(record=record,datefmt="")
         level       = record.levelname
         logger_name = record.name
-        thread_name = threading.current_thread().getName()
+        thread_name = threading.current_thread().name
 
         # Handle message
         if isinstance(record.msg, dict):
