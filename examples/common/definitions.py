@@ -1,10 +1,10 @@
-from activex import Axo, axo_method
+from axo import Axo, axo_method
 
 import numpy.typing as npt
 import numpy as np
 from typing import Optional,Tuple
 from typing_extensions import Annotated
-from activex.storage.mictlanx import GetKey
+from axo.storage.mictlanx import GetKey
 import random
 import math
 

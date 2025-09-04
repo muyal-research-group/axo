@@ -4,8 +4,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from typing_extensions import Annotated
-from activex import Axo,axo_method
-from activex.storage.mictlanx import GetKey,PutPath
+from axo import Axo,axo_method
+from axo.storage.mictlanx import GetKey,PutPath
 
 class HeatmapProducer(Axo):
     input_data_key:Annotated[str, GetKey] = "2a45605714f82cd082c0b607cca6b0aff36ba5383a8498021be7fa8328e8e3ac"

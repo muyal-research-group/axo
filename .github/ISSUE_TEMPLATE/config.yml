@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussions
+    url: https://github.com/jub-ecosystem/example-repo/discussions
+    about: Please use GitHub Discussions for questions and open-ended ideas.
+  - name: 🔒 Security Reports
+    url: https://github.com/jub-ecosystem/example-repo/security/policy
+    about: Please follow our Security Policy for reporting vulnerabilities.

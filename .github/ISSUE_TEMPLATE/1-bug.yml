@@ -1,0 +1,58 @@
+name: 🐛 Bug Report
+description: File a bug report to help us improve.
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill out the details below.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug and what you expected to happen.
+      placeholder: A bug happened!
+    validations:
+      required: true
+  - type: input
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Provide minimal steps to reproduce the issue.
+      placeholder: "1. Run ..., 2. Observe ..."
+  - type: dropdown
+    id: version
+    attributes:
+      label: Version
+      description: What version of our software are you running?
+      options:
+        - main (dev)
+        - 1.0.0
+        - 0.9.x
+      default: 0
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      multiple: true
+      options:
+        - Ubuntu/Linux
+        - macOS
+        - Windows
+        - Other
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Paste any relevant logs or stack traces.
+      render: shell
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting, you agree to follow our [Code of Conduct](../CODE_OF_CONDUCT.md).
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

@@ -5,7 +5,12 @@ build/
 dist/*
 .github/workflows/publish-to-test-pipy-backup.yml
 **/*.lock
-**/log
+/log
 **/*.npy
 **/publish.sh
 tests/out
+**/*.rar
+.coverage
+htmlcov/
+*.svg
+*.json

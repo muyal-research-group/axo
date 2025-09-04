@@ -1,6 +1,6 @@
 
-from activex.contextmanager import ActiveXContextManager
-from activex.runtime import get_runtime
+from axo.contextmanager import AxoContextManager
+from axo.runtime import get_runtime
 import logging
 from common import HeatmapProducer
 import more_itertools as mit
@@ -35,7 +35,7 @@ def main():
     key:str = mit.nth(args, 0, "")
 
     logger.debug("Step 1. init ActiveX object handler")
-    _ = ActiveXContextManager.distributed()
+    _ = AxoContextManager.distributed()
     logger.debug("Step 1.1 Get the runtime")
     runtime  = get_runtime()
     

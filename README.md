@@ -3,119 +3,116 @@
 </p>
 
 <div align=center>
-<a href="https://test.pypi.org/project/mictlanx/"><img src="https://img.shields.io/badge/build-0.0.20-2ea44f?logo=Logo&logoColor=%23000" alt="build - 0.0.20"></a>
+<a href="https://test.pypi.org/project/mictlanx/"><img src="https://img.shields.io/badge/build-0.0.3a0-2ea44f?logo=Logo&logoColor=%23000" alt="build - 0.0.3a0"></a>
 </div>
 <div align=center>
-	<h1>ActiveX: <span style="font-weight:normal;"> High available active objects</span></h1>
+	<h1>Axo: <span style="font-weight:normal;"> High Available Execution Engine</span></h1>
 </div>
 
-<!-- #  MictlanX  -->
-**ActiveX** is a prototype active object system for intensive application. For now the source code is kept private, and it is for the exclusive use of the *Muyal-ilal* research group. 
+**Axo** is a high available execution engine of the Axo platform, responsible for managing, executing, and orchestrating Active Objects (AO). The AO that encapsulates both data and behavior and can be executed remotely or locally like serverless functions.
+<!-- **Axo** is a prototype active object system for intensive application. For now the source code is kept private, and it is for the exclusive use of the *Muyal-ilal* research group.  -->
 
 
 <p align="center">
-  <img width="750" src="./assets/activex_01.png" />
+  <!-- <img width="750" src="./assets/activex_01.png" /> -->
+  <img width="750" src="./assets/arch.gif" />
 </p>
 
 
 ## Prerequisites 🧾
+Before using or developing with Axo, ensure the following tools are installed and configured:
 
+### 1. System Requirements
+  - Python ≥ 3.9
+  - Docker ≥ 28.3.2
+### 2. Install Python Dependencies (Quick Start)
 - Install [Poetry](https://python-poetry.org/)
-- Install Pip dependencies
   ```bash
   pip3 install -r requirements.txt
   ```
-- Install Docker for your OS
+### 3. Development Environment (Recommended)
+For development and contribution, we recommend using Poetry for environment and dependency management.
+
+- Install poetry shell
+  ```
+  poetry self add poetry-plugin-shell
+  ```
+- Init a new virtual environment 
+  ```
+  poetry shell
+  ```
+- Install the dependencies
+  ```
+  poetry lock & poetry install
+  ```
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
+### 4. Distributed mode 
+For distributed mode you must deploy a storage service and at least one ```axo-endpoint```
+
+```bash
+chmod +x ./deploy_storage.sh && chmod +x ./deploy_endpoint.sh  && ./deploy_storage.sh && deploy_endpoint.sh
+```
 
 ## Getting started 🚀
 
-Following the next steps to run the example a simple calculator.
+This example demonstrates how to build and test a distributed, active-object-based calculator using the Axo framework. It showcases how Axo handles method orchestration in local and distributed contexts using decorated methods and runtime context managers.
+
+### 📦 Key Concepts
+
+1. ```Axo```: **Base class for active objects**
+
+    All active objects must inherit from Axo. This class enables the object to interact with Axo runtimes (local or distributed) and use Axo features like ```persistify()``` or dynamic endpoint binding.
+
+2. ```@axo_method```: **Method decorator**
+
+    This decorator intercepts calls to decorated methods and routes them through the Axo runtime, collecting context like endpoint, bucket ID, key, etc.
+
+    - If the runtime is local, the method executes directly.
+
+    - If the runtime is distributed, the method is remotely dispatched to the appropriate endpoint where the active object lives.
+
+3. ```AxoContextManager```: **Runtime context**
+
+    This context manager sets up the runtime:
+
+    - ```AxoContextManager.local()```: sets up a local runtime (for testing or development)
+
+    - ```AxoContextManager.distributed(...)```: sets up a distributed runtime using DistributedEndpointManager
+
+4. ```DistributedEndpointManager```: **Defines remote endpoints**
+
+    Used to manage Axo endpoints in distributed mode. Each endpoint corresponds to a remote service capable of executing active object methods.
+
+## 📐 Example: Distributed Calculator
+We define a class ```Calculator``` that inherits from ```Axo```. It contains four math operations, each decorated with ```@axo_method```.
 
 ```python
-from activex.activex import ActiveX
-from activex.activex.decorators import activex
-from typing import List
+class Calculator(Axo):
+    @axo_method
+    def sum(self, xs: List[float], **kwargs) -> float:
+        return sum(xs)
 
-class Calculator(ActiveX):
-    def __init__(self):
-      self.records:List[str] =[]
+    @axo_method
+    def substract(self, xs: List[float], **kwargs) -> float:
+        return reduce(lambda x, y: x - y, xs)
 
-    @activex
-    def add(self,x:int,y:int):
-      res = x+y
-      self.records.append("Add {} + {} = {}".format(x,y,res))
-      return res
+    @axo_method
+    def divide(self, xs: List[float], **kwargs) -> float:
+        return reduce(lambda x, y: x / y, xs)
 
-# It is very important to call the activex handler
-_ = ActiveXHandler.local()
-calc = Calculator()
-# Do some operations
-res = calc.add(10,10) # -> 20
-# Save the object
-calc.persistify()
+    @axo_method
+    def mult(self, xs: List[float], **kwargs) -> float:
+        return reduce(lambda x, y: x * y, xs)
 ```
+All methods accept ```xs: List[float]``` and return a float. The **kwargs are internally injected by the ```@axo_method``` decorator and include Axo-specific routing metadata like ```axo_key```, ```axo_bucket_id```, etc.
 
 
-## Steps 
-### Step 1. Deploy MictlanX
-```
-./run_mictlanx.sh
-```
-Once all services are up  and running execute the next bash script
-```
-./init_peers.sh && ./peers_status.sh
-```
-
-### Step 2. Init the virtualenviroment and install
-
+### 🧪 Running the Tests
+Use pytest to run the Calculator tests:
 ```bash
-poetry shell && poetry install
-```
-### Step 3. Run examples
-
-Put a new object in MictlanX
-```bash
-python3 examples/01_put_calculator.py mycalculator01
-```
-Get a object from MictlanX and use it in ActiveX
-```bash
-python3 examples/02_get_calculator.py mycalculator01
-```
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-## Examples
-### 1. Heatmap producer
-
-The implementation of the heatmap producer object is over ```examples/definitions/plot.py```. You can see that there are 2 annotated attributes. These attributes are of the GetKey and PutPath type:
-
-- GetKey: It is a key and it should look for it in the storage service.
-- PutPath: It is a path to a file to be placed in the storage service.
-
-```python
-class HeatmapProducer(ActiveX):
-    input_data_key:Annotated[str, GetKey] = "heatmap01inputdata"
-    heatmap_output_path:Annotated[str,PutPath] = "examples/data/sample01.csv"
-```
-
-In this example the attribute ```input_data_key``` is annoted as a ```GetKey``` so the system tries to get the data from a storage service.  The attribute ```heatmap_output_path``` is annotated as a ```PutPath``` which means that the file at that path is gonna be allocated in the storage service.
-
-
-First you must run the following example: 
-
-```bash
-python3 examples/04_heatmap_put.py myheatmap01
-```
-
-
-Then you can get the object from the storage service:
-
-```bash
-python3 examples/05_heatmap_get.py myheatmap01
+pytest 
 ```
 
 <!-- CONTRIBUTING -->
@@ -148,7 +145,6 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
- Alejandro Zequeira - [@AlejandroZequeria]() - alejandro.delarosa@cinvestav.mx (Main developer)
 
  Ignacio Castillo - [@NachoCastillo]() - jesus.castillo.b@cinvestav.mx (Software Architect / Design)
 

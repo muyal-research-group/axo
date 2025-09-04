@@ -1,0 +1,41 @@
+name: 📌 Task
+description: Track a development or maintenance task.
+title: "[Task]: "
+labels: ["task"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to describe a development or refactoring task.
+  - type: textarea
+    id: description
+    attributes:
+      label: Task Description
+      description: What needs to be done?
+      placeholder: "Implement X, refactor Y ..."
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What is the intended outcome?
+      placeholder: "Improve performance, fix maintainability ..."
+  - type: checkboxes
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Define when this task is considered done.
+      options:
+        - label: Unit tests updated or added
+        - label: Documentation updated
+        - label: Code passes lint/format checks
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting, you agree to follow our [Code of Conduct](../CODE_OF_CONDUCT.md).
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

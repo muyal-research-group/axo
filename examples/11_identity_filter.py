@@ -1,15 +1,15 @@
-from activex.polymorphisim import FilterX, PipeAndFilter, BucketSink,BucketSource,FilterXOut
+from axo.polymorphisim import FilterX, PipeAndFilter, BucketSink,BucketSource,FilterXOut
 import time as T
-from activex import Axo,axo_method
+from axo import Axo,axo_method
 from typing import Generator,Any,List,Dict
-from activex.contextmanager import ActiveXContextManager
+from axo.contextmanager import AxoContextManager
 import humanfriendly as  HF
-from activex.endpoint import XoloEndpointManager
-from activex.storage import StorageService
+from axo.endpoint import EndpointManagerX
+from axo.storage import StorageService
 import cloudpickle as CP
 from mictlanx.v4.client import Client as MictlanXClient
 from mictlanx.utils.index import Utils as UtilsX
-from activex.polymorphisim import FilterXOut, PipeAndFilter,FilterX
+from axo.polymorphisim import FilterXOut, PipeAndFilter,FilterX
 import os 
 
 
@@ -24,7 +24,7 @@ MICTLANX_DEBUG             = bool(int(os.environ.get("MICTLANX_DEBUG","1")))
 MICTLANX_MAX_WORKERS       = int(os.environ.get("MICTLANX_MAX_WORKERS","2"))
 MICTLANX_LOG_PATH          = os.environ.get("MICTLANX_LOG_PATH","./log")
 SOURCE_PATH                = os.environ.get("SOURCE_PATH","./source")
-endpoint_manager = XoloEndpointManager(
+endpoint_manager = EndpointManagerX(
     endpoint_id=AXO_ENDPOINT_ID,
     endpoints={}
 )
@@ -35,7 +35,7 @@ endpoint_manager.add_endpoint(
     pubsub_port=AXO_ENDPOINT_PUBSUB_PORT,
     req_res_port=AXO_ENDPOINT_REQ_RES_PORT
 )
-axcm = ActiveXContextManager.distributed(
+axcm = AxoContextManager.distributed(
     endpoint_manager= endpoint_manager
 )
 
@@ -71,9 +71,9 @@ if __name__ == "__main__":
     # Define the pattern
     paf = PipeAndFilter()
     # Add source
-    paf.add_source(source = BucketSource("xxx"))
+    paf.set_source(source = BucketSource("xxx"))
     # Add sink
-    paf.add_sink(sink = BucketSink("yyy"))
+    paf.set_sink(sink = BucketSink("yyy"))
     # Add a filter
     paf.add_filter(IdentityFilter())
     paf.add_filter(IdentityFilter())

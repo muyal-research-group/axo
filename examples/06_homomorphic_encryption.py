@@ -1,6 +1,6 @@
 
 
-from activex.contextmanager import ActiveXContextManager
+from axo.contextmanager import AxoContextManager
 
 # from activex.storage import Put
 import logging
@@ -8,15 +8,15 @@ import more_itertools as mit
 import sys
 # 
 import time as T
-from activex import Axo,axo_method
-from activex.storage.mictlanx import GetKey,PutPath
+from axo import Axo,axo_method
+from axo.storage.mictlanx import GetKey,PutPath
 from typing import Annotated, Dict,Generator,Tuple
 import numpy.typing as npt  
 import pandas as pd
 import numpy  as np
 from nanoid import generate as nanoid
 import string
-from activex.runtime import get_runtime
+from axo.runtime import get_runtime
 from rory.core.security.dataowner import DataOwner
 from rory.core.security.cryptosystem.liu import Liu
 from rory.core.clustering.secure.distributed.skmeans import SKMeans
@@ -155,7 +155,7 @@ def main():
     key:str = mit.nth(args, 0, "")
 
     logger.debug("Step 1. init ActiveX object handler")
-    _ = ActiveXContextManager.distributed()
+    _ = AxoContextManager.distributed()
     logger.debug("Step 2. create an object instance")
     # The allocation of the input data occurs in another component
     runtime = get_runtime()

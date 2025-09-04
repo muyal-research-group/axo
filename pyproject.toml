@@ -1,28 +1,34 @@
 [tool.poetry]
-name = "activex"
-version = "0.0.22"
-description = "ActiveX is an active object system designed to empower users with the ability to effortlessly create and manage highly available objects. ActiveX easily mix storage and processing."
+name = "axo"
+version = "0.0.3a0"
+description = "Axo is an active object system designed to empower users with the ability to effortlessly create and manage highly available objects. ActiveX easily mix storage and processing."
 authors = ["Ignacio Castillo <ignacio.bcastillo@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
+python = ">=3.9,<4"
 cloudpickle = "^3.0.0"
 option = "^2.1.0"
 nanoid = "^2.0.0"
 pydantic = "^2.7.0"
 pyzmq = "^26.0.3"
-mictlanx = ">=0.0.160"
+mictlanx = "0.0.161a40"
+wrapt = "^1.17.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.1.1"
 more-itertools = "^10.2.0"
 pandas = "1.4.3"
 seaborn = "^0.13.2"
-rory = "0.0.143"
 galois = "0.3.8"
 
-scipy = "1.8"
+pytest-asyncio = "^0.26.0"
+rory = "0.0.220"
+coverage = "^7.10.2"
+pydeps = "^3.0.1"
+pytest-benchmark = "^5.1.0"
+pygal = "^3.0.5"
+pygaljs = "^1.0.2"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

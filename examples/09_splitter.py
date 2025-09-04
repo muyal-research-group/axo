@@ -1,11 +1,11 @@
 
 import time as T
-from activex import Axo,axo_method
+from axo import Axo,axo_method
 from typing import Generator,Any,List,Dict
-from activex.contextmanager import ActiveXContextManager
+from axo.contextmanager import AxoContextManager
 import humanfriendly as  HF
-from activex.endpoint import XoloEndpointManager
-from activex.storage import StorageService
+from axo.endpoint import EndpointManagerX
+from axo.storage import StorageService
 import cloudpickle as CP
 from mictlanx.v4.client import Client as MictlanXClient
 from mictlanx.utils.index import Utils as UtilsX
@@ -75,7 +75,7 @@ class Splitter(Axo):
 
 
 def main():
-    endpoint_manager = XoloEndpointManager(
+    endpoint_manager = EndpointManagerX(
         endpoint_id=AXO_ENDPOINT_ID,
         endpoints={}
     )
@@ -86,7 +86,7 @@ def main():
         pubsub_port=AXO_ENDPOINT_PUBSUB_PORT,
         req_res_port=AXO_ENDPOINT_REQ_RES_PORT
     )
-    axcm = ActiveXContextManager.distributed(
+    axcm = AxoContextManager.distributed(
         endpoint_manager= endpoint_manager
     )
     # axcm = ActiveXContextManager.local()
