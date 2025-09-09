@@ -58,7 +58,13 @@ def _build_axo_uri(axo_bucket_id: str,
     # Only build when we have the pieces we need
     if not axo_bucket_id or not axo_key:
         return None
-    if method and class_name:
+    
+    method     = method.strip() if method else ""
+    class_name = class_name.strip() if method else ""
+
+    if (method or method != "") and (class_name or class_name != ""):
         return f"axo://{axo_bucket_id}:{axo_key}/{axo_version}?class={class_name}&method={method}"
+    elif (method or method != ""):
+        return f"axo://{axo_bucket_id}:{axo_key}/{axo_version}?method={method}"
     # No method (e.g., PUT.METADATA): encode just the class
     return f"axo://{axo_bucket_id}:{axo_key}/{axo_version}"
