@@ -56,8 +56,8 @@ def _build_axo_uri(axo_bucket_id: str,
                    axo_version:Optional[int] = 0
 ) -> Optional[str]:
     # Only build when we have the pieces we need
-    if not axo_bucket_id or not axo_key:
-        return None
+    if not class_name or not method:
+        return f"axo://{axo_bucket_id}:{axo_key}/{axo_version}"
     
     method     = method.strip() if method else ""
     class_name = class_name.strip() if method else ""
