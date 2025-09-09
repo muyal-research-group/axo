@@ -4,6 +4,22 @@ from axo.contextmanager import AxoContextManager
 from .objects import Dog
 
 
+def test_extend_dependencies():
+    dog = Dog("dependency")
+    expected_dependencies = ["A","B"]
+    dog.extend_dependencies("A","B")
+
+    assert dog.get_dependencies() == expected_dependencies
+
+def test_append_dependency():
+    dog = Dog("dependency")
+    expected_dependencies = ["A","B"]
+    dog.append_dependency("A")
+    dog.append_dependency("B")
+
+    assert dog.get_dependencies() == expected_dependencies
+
+
 
 def test_create_instance_ao():
     name = "Rex"

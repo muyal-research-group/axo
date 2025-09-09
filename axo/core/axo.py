@@ -34,6 +34,7 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
+    List
 )
 
 # ─────────────────────────────────────────────────────────────── 3rd‑party ──
@@ -173,12 +174,21 @@ class Axo(metaclass=AxoMeta):
             obj._acx_metadata.axo_alias            = kwargs.get("axo_alias",obj._acx_metadata.axo_alias)
             obj._acx_metadata.axo_version          = kwargs.get("axo_version",obj._acx_metadata.axo_version)
             obj._acx_metadata.axo_endpoint_id      = kwargs.get("axo_endpoint_id",obj._acx_metadata.axo_endpoint_id)
+            obj._acx_metadata.axo_dependencies     = kwargs.get("axo_dependencies",obj._acx_metadata.axo_dependencies)
         # print(kwargs)
         return obj
     
     def __init__(self,*args,**kwargs):
         pass
+    
+    def append_dependency(self,dependency:str ):
+        self._acx_metadata.axo_dependencies.append(dependency)
+        
+    def extend_dependencies(self,*dependencies:str):
+        self._acx_metadata.axo_dependencies.extend(dependencies)
 
+    def get_dependencies(self)->List[str]:
+        return self._acx_metadata.axo_dependencies
     # ------------------------------------------------------------------ #
     # Serialisation helpers
     # ------------------------------------------------------------------ #
