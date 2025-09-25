@@ -20,7 +20,7 @@ async def before_all_tests(bucket_id:str):
     ss = MictlanXStorageService(
         bucket_id   = "b1",
         protocol    = "http",
-        routers_str = "mictlanx-router-0:localhost:60666"
+        uri = "mictlanx-router-0:localhost:60666"
     )
     # bids = ["axo","b1","bao","baox"]
     # for bid in bids:

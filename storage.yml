@@ -1,7 +1,7 @@
 services:
   
   axo-storage-router-0:
-    image: nachocode/mictlanx:router-0.0.161a20
+    image: nachocode/mictlanx:router-0.1.0a1
     container_name: axo-storage-router-0
     environment:
       - MICTLANX_DAEMON_HOSTNAME=mictlanx-rm
@@ -56,7 +56,7 @@ services:
     restart: unless-stopped
 
   axo-storage-rm:
-    image: nachocode/mictlanx:rm-0.0.161a15
+    image: nachocode/mictlanx:rm-0.1.0a1
     container_name: "mictlanx-rm"
     environment:
       MICTLANX_PEERS_PROTOCOL: "http"
@@ -113,7 +113,7 @@ services:
 
   axo-storage-peer-0:
     container_name: axo-storage-peer-0
-    image: "nachocode/mictlanx:peer-0.0.160-alpha.1"
+    image: "nachocode/mictlanx:peer-0.1.0a1"
     hostname: axo-storage-peer-0
     environment:
       USER_ID: "6666"
@@ -144,7 +144,7 @@ services:
 
   axo-storage-peer-1:
     container_name: axo-storage-peer-1
-    image: "nachocode/mictlanx:peer-0.0.160-alpha.1"
+    image: "nachocode/mictlanx:peer-0.1.0a1"
     hostname: axo-storage-peer-1
     environment:
       USER_ID: "6666"
@@ -176,7 +176,7 @@ services:
 
   axo-storage-peer-2:
     container_name: axo-storage-peer-2
-    image: "nachocode/mictlanx:peer-0.0.160-alpha.1"
+    image: "nachocode/mictlanx:peer-0.1.0a1"
     hostname: axo-storage-peer-2
     environment:
       USER_ID: "6666"
