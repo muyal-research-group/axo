@@ -48,7 +48,7 @@ class DistributedRuntime(ActiveXRuntime,Thread):
         # collaborators --------------------------------------------------
         self.__q = q
         self.__scheduler = scheduler
-        self.__storage_service = storage_service if storage_service else MictlanXStorageService(protocol=default_storage_service_params.get("protocol","http"),client=default_storage_service_params.get("client",None),uri=default_storage_service_params.get("routers_str","") )
+        self.__storage_service = storage_service if storage_service else MictlanXStorageService(client=default_storage_service_params.get("client",None),uri=default_storage_service_params.get("routers_str","") )
         self.__axo_storage = AxoStorage(storage=self.__storage_service)
         self.__axo_loader = AxoLoader(storage=self.__axo_storage,
             api_globals={**loader_api_globals,"Axo":Axo,"axo_method":axo_method} or {},

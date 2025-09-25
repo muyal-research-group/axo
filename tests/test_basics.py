@@ -12,8 +12,6 @@ from axo.storage import AxoStorage
 async def before_all_tests():
     ss = MictlanXStorageService(
         bucket_id   = "b1",
-        protocol    = "http",
-        uri = "mictlanx-router-0:localhost:60666"
     )
     bids = ["axo","b1","bao","baox"]
     for bid in bids:
@@ -59,7 +57,7 @@ def dem():
 
 @pytest.fixture
 def storage_service() -> StorageService:
-    return MictlanXStorageService(protocol="http")
+    return MictlanXStorageService()
 # 
 # @pytest.fixture
 # def axo_storage(storage_service):

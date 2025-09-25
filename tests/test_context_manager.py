@@ -45,7 +45,7 @@ class Calc(Axo):
 
 @pytest.fixture
 def storage_service() -> StorageService:
-    return MictlanXStorageService(protocol="http")
+    return MictlanXStorageService()
 # 
 
 @pytest.fixture()

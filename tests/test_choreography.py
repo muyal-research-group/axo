@@ -79,8 +79,6 @@ class Compresser(Axo):
 async def before_all_tests():
     ss = MictlanXStorageService(
         bucket_id   = "b1",
-        protocol    = "http",
-        uri = "mictlanx-router-0:localhost:60666"
     )
     bids = ["bsg-0","bcp-0","sinkbucket"]
     for bid in bids:
@@ -102,7 +100,7 @@ def endpoint_manager():
 
 @pytest.fixture
 def storage_service() -> StorageService:
-    return MictlanXStorageService(protocol="http")
+    return MictlanXStorageService()
 
 @pytest.mark.asyncio
 async def test_pipeline(endpoint_manager:DistributedEndpointManager, storage_service:StorageService):

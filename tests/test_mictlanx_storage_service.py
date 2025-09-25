@@ -3,17 +3,32 @@ import io
 import functools
 import asyncio
 import pytest
+import pytest_asyncio
 
 from axo.errors import AxoErrorType
 from axo.storage.types import AxoStorageMetadata
 from axo.storage.services import MictlanXStorageService
 from mictlanx import AsyncClient
 from mictlanx.services import AsyncRouter
+from mictlanx.utils.uri import MictlanXURI
 # from mictlanx.v4.interfaces import AsyncRouter
 
 import uuid
 
 # -------------------------------- Fixtures -------------------------------- #
+@pytest_asyncio.fixture(scope="session", autouse=True)
+# @pytest.mark.asyncio
+async def before_all_tests():
+    ss = MictlanXStorageService(
+        bucket_id   = "b1",
+        uri = "mictlanx://mictlanx-router-0@localhost:60666?/api_version=4&protocol=http"
+    )
+    bids = ["axo","b1","bao","baox","bkt"]
+    for bid in bids:
+        res = await ss.client.delete_bucket(bid)
+        print(f"BUCKET [{bid}] was clean")
+    yield
+
 
 @pytest.fixture
 def bucket():
@@ -42,13 +57,15 @@ def svc_ok():
             protocol  = "http"
         )
     ]
+    uri = MictlanXURI.build(routers=routers)
+
     fake = AsyncClient(
         capacity_storage = "10GB",
         client_id        = "pytest-ss",
         debug            = True,
         eviction_policy  = "LRU",
         max_workers      = 2,
-        routers          = routers
+        uri = uri,
     )
     s = MictlanXStorageService(client=fake)
     return s

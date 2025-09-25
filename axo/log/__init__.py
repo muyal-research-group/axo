@@ -61,15 +61,15 @@ class Log(logging.Logger):
                  filename:Option[str] = NONE,
                  output_path:Option[str] =NONE,
                  error_output_path:Option[str] = NONE,
-                 create_folder:bool= True,
+                #  create_folder:bool= True,
                  to_file:bool = True,
                  when:str = "m",
                  interval:int = 10,
                 #  "/mictlanx/client/mictlanx-client-0.error", 
                  ):
         super().__init__(name,level)
-        if (not os.path.exists(path) and create_folder) :
-            os.makedirs(path)
+        if not os.path.exists(path):
+            os.makedirs(path,exist_ok=True)
             
         if not (disabled):
             consolehanlder =logging.StreamHandler(sys.stdout)
