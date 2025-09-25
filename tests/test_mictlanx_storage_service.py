@@ -7,8 +7,9 @@ import pytest
 from axo.errors import AxoErrorType
 from axo.storage.types import AxoStorageMetadata
 from axo.storage.services import MictlanXStorageService
-from mictlanx.v4.asyncx import AsyncClient
-from mictlanx.v4.interfaces import AsyncRouter
+from mictlanx import AsyncClient
+from mictlanx.services import AsyncRouter
+# from mictlanx.v4.interfaces import AsyncRouter
 
 import uuid
 
