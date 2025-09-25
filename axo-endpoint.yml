@@ -1,6 +1,6 @@
 services:
     activex-endpoint-0:
-        image: nachocode/axo:endpoint-0.0.3a0
+        image: nachocode/axo:endpoint-0.0.3a1
         container_name: axo-endpoint-0
         ports:
                 - 16666:16666

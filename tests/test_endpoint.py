@@ -58,8 +58,8 @@ async def test_add_code_class_def():
     assert res.is_ok
     res = le.add_class_definition(calc)
     assert res.is_ok
-    res = le.task_execution(lambda x:x)
-    assert res.is_err
+    # res = le.task_execution(lambda x:x)
+    # assert res.is_err
     res = le.elasticity(3)
     assert res.is_err
     

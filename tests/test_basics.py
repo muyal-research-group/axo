@@ -20,17 +20,18 @@ async def before_all_tests():
         res = await ss.client.delete_bucket(bid)
         print(f"BUCKET [{bid}] was clean")
     yield
+
 class Calculator(Axo):
     from typing import List
     @axo_method
-    def sum(self, xs:List[float],**kwargs):
-        print(kwargs)
+    def sum(self, xs:List[float],**kwargs)->float:
         return sum(xs)
     
     @axo_method
     def substract(self, xs:List[float],**kwargs)->float:
         from functools import reduce
         return reduce(lambda x,y: x-y, xs)
+
     @axo_method
     def divide(self, xs:List[float],**kwargs)->float:
         from functools import reduce
@@ -48,11 +49,11 @@ class Calculator(Axo):
 def dem():
     dem = DistributedEndpointManager()
     dem.add_endpoint(
-        endpoint_id="axo-endpoint-0",
-        hostname="localhost",
-        protocol="tcp",
-        req_res_port=16667,
-        pubsub_port=16666
+        endpoint_id  = "axo-endpoint-0",
+        hostname     = "localhost",
+        protocol     = "tcp",
+        req_res_port = 16667,
+        pubsub_port  = 16666
     )
     return dem
 
@@ -69,7 +70,7 @@ def storage_service() -> StorageService:
 def test_local():
     with AxoContextManager.local() as cmx:
         c:Calculator = Calculator()
-        res = c.sum([0,1,2])
+        res = c.sum([0,1,2],axo_endpoint_id = "axo1111")
         print(res)
 
 
