@@ -12,7 +12,7 @@ option = "^2.1.0"
 nanoid = "^2.0.0"
 pydantic = "^2.7.0"
 pyzmq = "^26.0.3"
-mictlanx = "0.1.0a1"
+mictlanx = "0.1.0a2"
 wrapt = "^1.17.2"
 
 [tool.poetry.group.dev.dependencies]

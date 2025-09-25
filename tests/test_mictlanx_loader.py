@@ -16,7 +16,7 @@ def class_name(): return "Greeter"
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
 # @pytest.mark.asyncio
-async def before_all_tests(bucket_id:str):
+async def before_all_tests():
     ss = MictlanXStorageService(
         bucket_id   = "b1",
     )

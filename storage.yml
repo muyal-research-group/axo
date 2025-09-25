@@ -1,7 +1,7 @@
 services:
   
   axo-storage-router-0:
-    image: nachocode/mictlanx:router-0.1.0a1
+    image: nachocode/mictlanx:router-0.1.0a2
     container_name: axo-storage-router-0
     environment:
       - MICTLANX_DAEMON_HOSTNAME=mictlanx-rm
@@ -58,11 +58,11 @@ services:
     restart: unless-stopped
 
   axo-storage-rm:
-    image: nachocode/mictlanx:rm-0.1.0a1
+    image: nachocode/mictlanx:rm-0.1.0a2
     container_name: "mictlanx-rm"
     environment:
       MICTLANX_PEERS_PROTOCOL: "http"
-      PEERS: "axo-storage-peer-0:axo-storage-peer-0:25000 axo-storage-peer-1:axo-storage-peer-1:25001 axo-storage-peer-2:axo-storage-peer-2:25002"
+      MICTLANX_PEERS: "mictlanx://axo-storage-peer-0:axo-storage-peer-0:25000,axo-storage-peer-1:axo-storage-peer-1:25001,axo-storage-peer-2:axo-storage-peer-2:25002/?protocol=http&api_version=4"
       MICTLANX_PORT: "5555"
       MICTLANX_IP_ADDR: "*"
       MICTLANX_PROTOCOL: "tcp"
@@ -207,14 +207,39 @@ services:
     networks:
       - axo-net
 
-
+  mictlanx-summoner-0:
+    image: nachocode/mictlanx:summoner
+    container_name: mictlanx-summoner-0
+    hostname: mictlanx-summoner-0
+    privileged: true
+    ports:
+      - 15000:15000
+    environment:
+      - USER_ID=1001
+      - GROUP_ID=1002
+      - DOCKER_GID=1001
+      - BASE_PATH=${BASE_PATH-/app/mictlanx}
+      - BIN_NAME=summoner
+      - NODE_ID=mictlanx-summoner-0
+      - NODE_PORT=15000
+      - IP_ADDRESS=mictlanx-summoner-0
+      - SERVER_IP_ADDR=0.0.0.0
+      - LOG_PATH=${BASE_PATH-/app/mictlanx}/log
+      - LOCAL_PATH=${BASE_PATH-/app/mictlanx}/local
+      - DATA_PATH=${BASE_PATH-/app/mictlanx}/data
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - mictlanx-summoner-0:/mictlanx
+    networks:
+      - axo-net
   
 volumes:
   axo-storage-router-0_logs:
   axo-storage-peer-0:
   axo-storage-peer-1:
   axo-storage-peer-2:
-  axo-storage-rm-0: 
+  axo-storage-rm-0:
+  mictlanx-summoner-0:
 
 networks:
   axo-net:
