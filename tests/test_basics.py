@@ -102,7 +102,12 @@ async def test_get_ao(dem:DistributedEndpointManager,storage_service:StorageServ
         # print("AXO_KEY",a)
         res = await c.persistify()
         assert res.is_ok
-        ao = await Axo.get_by_key(bucket_id=axo_bucket_id,key=axo_key )
+
+        ao = await Axo.get_by_key(
+            bucket_id=axo_bucket_id,
+            key=axo_key 
+        )
+
         assert ao.is_ok
         calc = ao.unwrap()
         # print("CALC",calc)

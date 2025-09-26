@@ -93,7 +93,10 @@ def axo_task(
     )
 
     def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
+        
         wrapped = __axo_task(fn,ctx=ctx)          # preserve normal Axo method semantics
+        
+
         return wrapped
         # return _attach_config(wrapped, cfg)
     return decorator
@@ -251,7 +254,7 @@ def __axo_task(wrapped: Callable[..., R], ctx:AxoContext) -> Callable[..., Resul
                 # "ok": res.is_ok,
                 "response_time": T.time() - t1,  # update this properly
             })
-            return Ok(1)
+            return res
             # if res.is_ok:S
                 # result = res.unwrap()
                 # if isinstance(result, Result):

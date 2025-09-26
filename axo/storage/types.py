@@ -3,7 +3,7 @@ from typing import Dict,Iterator,Optional
 from option import Result
 from pydantic import BaseModel,Field
 from axo.errors import AxoError,AxoErrorType
-
+from xolo.utils.utils import Utils as XoloUtils
 ChunkIter   = Iterator[bytes]
 ComposedKey = str
 BucketId    = str
@@ -19,6 +19,7 @@ class AxoStorageMetadata(BaseModel):
     tags:Optional[Dict[str,str]]={} # User-defined metadata
     content_type:Optional[str] = "application/octet-stream" # Define the type of the content
     is_disabled:Optional[bool]=Field(default=False)
+    
 
 # ---------- DTO for read results ----------
 
@@ -28,6 +29,28 @@ class AxoObjectBlob:
     def __init__(self,data:AxoObjectData,metadata:AxoStorageMetadata):
         self.data     = data
         self.metadata = metadata
+    
+    @staticmethod
+    def from_source_code(bucket_id:str,ball_id:str,key:str,code:str,producer_id:str="axo"):
+        source_code_data = code.encode('utf-8') 
+        code_checksum = XoloUtils.sha256(source_code_data)
+        axo_blob = AxoObjectBlob(
+            data=source_code_data,
+            metadata=AxoStorageMetadata(
+                content_type = "text/plain",
+                ball_id      = f"{ball_id}_source_code",
+                tags         = {
+                    
+                },
+                bucket_id    =bucket_id,
+                checksum     = code_checksum,
+                is_disabled  = False,
+                key          = key,
+                producer_id  = producer_id,
+                size         = len(source_code_data)
+            )
+        )        
+        return axo_blob
 
 class AxoObjectBlobs:
     """

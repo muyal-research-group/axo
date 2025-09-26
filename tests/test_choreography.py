@@ -6,6 +6,7 @@ from axo.endpoint.manager import DistributedEndpointManager
 from axo.storage.services import MictlanXStorageService,StorageService
 
 class GrayScaler(Axo):
+
     @axo_task()
     def to_grayscale(**kwargs)->bytes:
         from PIL import Image
@@ -21,11 +22,11 @@ class GrayScaler(Axo):
             return buf
         raise Exception("No source was provided")
 
-            # return buf.getvalue()
+
     
 class Compresser(Axo):
     from axo.core.models import AxoContext
-    @axo_task(source_bucket="e3uiviu4s3jmiuw6",sink_bucket="sinkbucket")
+    @axo_task(source_bucket="e3uiviu4s3jmiuw6",sink_bucket="sinkbucketx")
     def zip(
         self,
         source: bytes,
@@ -112,8 +113,20 @@ async def test_pipeline(endpoint_manager:DistributedEndpointManager, storage_ser
         
         
         assert (await c.persistify()).is_ok
-        res = c.zip(source=b"HOLAAAAAAAAAAAAAAAAAAA xD", name="payload")
-        print(res)
+        from option import Result
+        from axo.core.models import BallRef,AxoPointer
+        from axo.errors import AxoError
+
+        res:Result[BallRef,AxoError] = c.zip(source=b"HOLAAAAAAAAAAAAAAAAAAA xD", name="payload")
+        print("RESUILT",res )
+        assert res.is_ok
+        ball_ref = res.unwrap()
+        data     = await ball_ref.to_pointer(storage_service,consume=True,delete_remote=False).into_bytes()
+        print(data)
+
+
+
+        # print(res)
         # res = c.unzip(archive=res)
         # print(res)
         # 2) Store the objects

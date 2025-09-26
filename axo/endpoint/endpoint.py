@@ -35,6 +35,7 @@ from axo.core.decorators import AxoContext
 import axo.models as AXOMODELS
 from axo.enums import AxoOperationType
 from axo.storage.types import AxoStorageMetadata
+from axo.core.models import BallRef
 
 if TYPE_CHECKING:
     from axo.core.axo import Axo  # type-only; not executed at runtime
@@ -443,10 +444,16 @@ class DistributedEndpoint(EndpointX):
             if reply_res.is_err:
                 return Err(reply_res.unwrap_err())
             (reply,payload) = reply_res.unwrap()
-            
-            # if len(payload) >0:
-            #     f_result = Ok(cp.loads(payload[0]))
-            return Ok("TASK_EXCECUTION")
+            print(reply,payload)
+            if len(payload) >0:
+                ball_ref = BallRef.model_validate_json(payload[0])
+
+                return Ok(ball_ref)
+            return Err(Exception("No payload received") )
+                # f_result = Ok(cp.loads(payload[0]))
+                # print("F_RESULT",f_result)
+                # return Ok(f_result)
+            # return Ok("TASK_EXCECUTION")
 
         except Exception as exc:
             self._cleanup()

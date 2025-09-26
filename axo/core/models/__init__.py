@@ -345,7 +345,10 @@ class BallRef(BaseModel):
             tags=dict(md.tags or {}),
             chunks=(one,),
         )
-
+    
+    def to_pointer(self, storage, consume: bool = False, delete_remote: bool = False) -> 'AxoPointer':
+        """Creates an AxoPointer from this BallRef instance."""
+        return AxoPointer(storage, self, consume=consume, delete_remote=delete_remote)
 
 @dataclass(frozen=True)
 class AxoPointerState:
@@ -356,8 +359,7 @@ class AxoPointerState:
 
 class AxoPointer:
     """
-    Puntero materializable: sabe cómo unir los chunks del Ball y traerlos
-    a memoria o archivo, sin objetos auxiliares.
+    A Pointer to a remote Axo object (Ball), with methods to materialize it.
     """
     __slots__ = ("_storage", "_ref", "_state", "_alive")
 
