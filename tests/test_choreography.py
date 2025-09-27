@@ -1,9 +1,13 @@
 import pytest
 import pytest_asyncio
+from option import Result
+# 
 from axo import axo_method,Axo,axo_task,axo_stream
 from axo.contextmanager import AxoContextManager
 from axo.endpoint.manager import DistributedEndpointManager
 from axo.storage.services import MictlanXStorageService,StorageService
+from axo.core.models import BallRef
+from axo.errors import AxoError
 
 class GrayScaler(Axo):
 
@@ -26,7 +30,7 @@ class GrayScaler(Axo):
     
 class Compresser(Axo):
     from axo.core.models import AxoContext
-    @axo_task(source_bucket="e3uiviu4s3jmiuw6",sink_bucket="sinkbucketx")
+    @axo_task(source_bucket="bkw",sink_bucket="sinkbucketx")
     def zip(
         self,
         source: bytes,
@@ -48,9 +52,11 @@ class Compresser(Axo):
             zf.writestr(name, source)
 
         return buf.getvalue()
+
+    @axo_task(source_bucket="sinkbucketx",sink_bucket="uncompressedbucket")
     def unzip(
         self,
-        archive: bytes,
+        source: bytes,
         name:str = "payload",
         *,
         ctx: AxoContext = AxoContext(),
@@ -64,7 +70,7 @@ class Compresser(Axo):
         import io
         import zipfile
 
-        with zipfile.ZipFile(io.BytesIO(archive), "r") as zf:
+        with zipfile.ZipFile(io.BytesIO(source), "r") as zf:
             names = zf.namelist()
             if not names:
                 raise ValueError("empty ZIP archive")
@@ -81,7 +87,7 @@ async def before_all_tests():
     ss = MictlanXStorageService(
         bucket_id   = "b1",
     )
-    bids = ["bsg-0","bcp-0","sinkbucket"]
+    bids = ["bsg-0","bcp-0","sinkbucket","sinkbucketx","uncompressedbucket"]
     for bid in bids:
         res = await ss.client.delete_bucket(bid)
         print(f"BUCKET [{bid}] was clean")
@@ -107,22 +113,34 @@ def storage_service() -> StorageService:
 async def test_pipeline(endpoint_manager:DistributedEndpointManager, storage_service:StorageService):
 
     with AxoContextManager.distributed(endpoint_manager=endpoint_manager,storage_service=storage_service) as rt:
-        # 1) Get and create the instances 
-        gs:GrayScaler = GrayScaler(axo_bucket_id="bgs-0") # or Axo.get_by_key(...)
+        # 1. Instantiate an "Active Object" of type Compresser.
+        # This Active Object(AO) is initialized with identifiers for where it should be stored.
         c:Compresser = Compresser(axo_bucket_id="bcp-0", axo_key="cp-0") # or Axo.get_by_key(...)
         
-        
+        # 2. Persist the AO.
+        # This saves the AO's code and initial configuration, making it usable later.
         assert (await c.persistify()).is_ok
-        from option import Result
-        from axo.core.models import BallRef,AxoPointer
-        from axo.errors import AxoError
-
-        res:Result[BallRef,AxoError] = c.zip(source=b"HOLAAAAAAAAAAAAAAAAAAA xD", name="payload")
-        print("RESUILT",res )
+        
+        # 3. Execute the 'zip' method on the AO.
+        # This sends the source bytes to be compressed by the AO's logic.
+        # The operation returns a 'BallRef', which is a reference to the compressed output, not the data itself.
+        res:Result[BallRef,AxoError] = c.zip(source=b"HOLAAAAAAAAAAAAAAAAAAA", name="payload")
         assert res.is_ok
+        # 4. Unwrap the result to get the reference to the compressed data.
         ball_ref = res.unwrap()
-        data     = await ball_ref.to_pointer(storage_service,consume=True,delete_remote=False).into_bytes()
-        print(data)
+        # 5. Use the reference to create a pointer and fetch the actual data.
+        # The '.to_pointer()' creates a handle to access the remote data,
+        # and '.into_bytes()' downloads the data from storage.
+        zip_result     = await ball_ref.to_pointer(storage_service,consume=True,delete_remote=False).into_bytes()
+        print(zip_result)
+        assert zip_result.is_ok
+        zip_bytes = zip_result.unwrap()
+
+        res:Result[BallRef,AxoError]  = c.unzip(archive=zip_bytes, name="payload")
+        assert res.is_ok
+        unzip_ball_ref = res.unwrap()
+        unzip_result   = await unzip_ball_ref.to_pointer(storage_service,consume=True,delete_remote=False).into_bytes()
+        print(unzip_result)
 
 
 
