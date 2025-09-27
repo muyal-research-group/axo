@@ -151,7 +151,7 @@ class ActiveXRuntime(ABC):
                 producer_id  = producer_id,
                 bucket_id    = bucket_id,
                 tags         = {**tags},
-                content_type = "application/python",
+                content_type = "text/plain",
                 is_disabled  = False,
             )
             attr_md = AxoStorageMetadata(
