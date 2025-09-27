@@ -4,6 +4,9 @@ from option import Result
 from pydantic import BaseModel,Field
 from axo.errors import AxoError,AxoErrorType
 from xolo.utils.utils import Utils as XoloUtils
+import json
+# from axo.storage.utils import StorageUtils as SU
+
 ChunkIter   = Iterator[bytes]
 ComposedKey = str
 BucketId    = str
@@ -31,26 +34,55 @@ class AxoObjectBlob:
         self.metadata = metadata
     
     @staticmethod
-    def from_source_code(bucket_id:str,ball_id:str,key:str,code:str,producer_id:str="axo"):
+    def from_source_code(bucket_id:str,key:str,code:str,producer_id:str="axo",tags:Dict[str,str]={}):
         source_code_data = code.encode('utf-8') 
         code_checksum = XoloUtils.sha256(source_code_data)
+        src_key = f"{key}_source_code"
+        attr_key = f"{key}_attrs"
+
         axo_blob = AxoObjectBlob(
             data=source_code_data,
             metadata=AxoStorageMetadata(
                 content_type = "text/plain",
-                ball_id      = f"{ball_id}_source_code",
-                tags         = {
-                    
-                },
-                bucket_id    =bucket_id,
+                bucket_id    = bucket_id,
+                ball_id      = src_key,
+                key          = src_key,
+                tags         = tags,
                 checksum     = code_checksum,
                 is_disabled  = False,
-                key          = key,
                 producer_id  = producer_id,
                 size         = len(source_code_data)
             )
         )        
         return axo_blob
+    @staticmethod
+    def from_attrs(bucket_id:str,key:str,attrs:Dict[str,any],producer_id:str="axo",tags:Dict[str,str]={}):
+        attrs_data = json.dumps(attrs).encode('utf-8') 
+        attr_key =  f"{key}_attrs"
+        attrs_checksum = XoloUtils.sha256(attrs_data)
+        axo_blob = AxoObjectBlob(
+            data=attrs_data,
+            metadata=AxoStorageMetadata(
+                bucket_id    = bucket_id,
+                ball_id      = attr_key,
+                key          = attr_key,
+                size         = len(attrs_data),
+                checksum     = attrs_checksum,
+                is_disabled  = False,
+                tags         = tags,
+                producer_id  = producer_id,
+                content_type = "application/json",
+            )
+        )        
+        return axo_blob
+    
+    @staticmethod
+    def from_code_and_attrs(bucket_id:str,key:str,code:str,attrs:Dict[str,any],producer_id:str="axo",tags:Dict[str,str]={}):
+        src_blob  = AxoObjectBlob.from_source_code(bucket_id=bucket_id,key=key,code=code,producer_id=producer_id,tags=tags)
+        attr_blob = AxoObjectBlob.from_attrs(bucket_id=bucket_id,key=key,attrs=attrs,producer_id=producer_id,tags=tags)
+        blobs     = AxoObjectBlobs(source_code_blob=src_blob,attrs_blob=attr_blob)
+        return blobs
+    
 
 class AxoObjectBlobs:
     """
