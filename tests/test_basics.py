@@ -89,6 +89,7 @@ async def test_distributed(dem:DistributedEndpointManager,storage_service:Storag
         res = c.divide([3,2,1])
         print(res)
 
+@pytest.mark.skip(reason="Needs Axo Endpoint v0.0.4")
 @pytest.mark.asyncio
 async def test_get_ao(dem:DistributedEndpointManager,storage_service:StorageService):
     with AxoContextManager.distributed( endpoint_manager= dem,storage_service=storage_service) as cmx:
