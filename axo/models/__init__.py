@@ -9,13 +9,14 @@ from option import Ok, Err, Result
 import humanfriendly as HF
 # 
 from axo.helpers import _make_id_validator,_generate_id,_build_axo_uri
-from axo.core.models import MetadataX
+from axo.core.models import MetadataX,AxoContext
 from axo.environment import AXO_ID_SIZE
 from axo.errors import AxoError,AxoErrorType
 from axo.enums import TaskStatus,AxoOperationType
 from axo.core.constants import *
 
 AxoObjectId = Annotated[Optional[str], AfterValidator(_make_id_validator(AXO_ID_SIZE))]
+
 
 
 class Task:
@@ -328,7 +329,83 @@ class MethodExecution(AxoRequestMsg):
         )
 
         super().__init__(envelope=env, payload=[_fargs,_fkwargs])  # no extra frames for PING
+class TaskExecution(AxoRequestMsg):
+    def __init__(
+        self,
+        *,
+        method:str,
+        metadata:MetadataX,
+        ctx:AxoContext,
+        fargs: list[Any] | None = [],
+        fkwargs: Dict[str, Any] | None = {},
+        allow_stale:bool = True,
+        task_id: Optional[str] = None,
+    ):
+        _fargs   = CP.dumps(fargs or [])
+        _fkwargs = CP.dumps(fkwargs or {})
+        _ctx     = CP.dumps(ctx)
+        env = AxoRequestEnvelope(
+            msg_id               = _generate_id(size=AXO_ID_SIZE),
+            task_id              = task_id,
+            operation            = AxoOperationType.TASK_EXEC,
+            allow_stale          = allow_stale,
+            axo_dependencies     = metadata.axo_dependencies or [],
+            axo_sink_bucket_id   = metadata.axo_sink_bucket_id,
+            axo_source_bucket_id = metadata.axo_source_bucket_id,
+            axo_key              = metadata.axo_key,
+            axo_bucket_id        = metadata.axo_bucket_id,
+            axo_endpoint_id      = metadata.axo_endpoint_id,
+            axo_version          = metadata.axo_version,
+            axo_uri              = metadata.axo_uri,
+            axo_class_name       = metadata.axo_class_name,
+            axo_alias            = metadata.axo_alias,
+            axo_is_read_only     = metadata.axo_is_read_only,
+            axo_module           = metadata.axo_module,
+            path                 = metadata.path,
+            sink_path            = metadata.sink_path,
+            source_path          = metadata.source_path,
+            method = method
+        )
 
+        super().__init__(envelope=env, payload=[_fargs,_fkwargs,_ctx])  # no extra frames for PING
+
+class StreamExecution(AxoRequestMsg):
+    def __init__(
+        self,
+        *,
+        method:str,
+        metadata:MetadataX,
+        fargs: list[Any] | None = [],
+        fkwargs: Dict[str, Any] | None = {},
+        allow_stale:bool = True,
+        task_id: Optional[str] = None,
+    ):
+        _fargs = CP.dumps(fargs or [])
+        _fkwargs = CP.dumps(fkwargs or {})
+        env = AxoRequestEnvelope(
+            msg_id               = _generate_id(size=AXO_ID_SIZE),
+            task_id              = task_id,
+            operation            = AxoOperationType.STREAM_EXEC,
+            allow_stale          = allow_stale,
+            axo_dependencies     = metadata.axo_dependencies or [],
+            axo_sink_bucket_id   = metadata.axo_sink_bucket_id,
+            axo_source_bucket_id = metadata.axo_source_bucket_id,
+            axo_key              = metadata.axo_key,
+            axo_bucket_id        = metadata.axo_bucket_id,
+            axo_endpoint_id      = metadata.axo_endpoint_id,
+            axo_version          = metadata.axo_version,
+            axo_uri              = metadata.axo_uri,
+            axo_class_name       = metadata.axo_class_name,
+            axo_alias            = metadata.axo_alias,
+            axo_is_read_only     = metadata.axo_is_read_only,
+            axo_module           = metadata.axo_module,
+            path                 = metadata.path,
+            sink_path            = metadata.sink_path,
+            source_path          = metadata.source_path,
+            method = method
+        )
+
+        super().__init__(envelope=env, payload=[_fargs,_fkwargs])  # no extra frames for PING
 
     # @staticmethod
     # def parse_reply(frames: List[bytes]) -> Result[AxoReplyEnvelope, AxoError]:

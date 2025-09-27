@@ -70,6 +70,8 @@ class AxoOperationType(StrEnum):
     PUT_METADATA    = "PUT_METADATA"
     PING            = "PING"
     METHOD_EXEC     = "METHOD_EXEC"
+    TASK_EXEC       = "TASK_EXEC"
+    STREAM_EXEC     = "STREAM_EXEC"
     UNKNOWN         = "UNKNOWN"
     CREATE_ENDPOINT = "CREATE_ENDPOINT"
     @classmethod

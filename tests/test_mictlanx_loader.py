@@ -16,11 +16,9 @@ def class_name(): return "Greeter"
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
 # @pytest.mark.asyncio
-async def before_all_tests(bucket_id:str):
+async def before_all_tests():
     ss = MictlanXStorageService(
         bucket_id   = "b1",
-        protocol    = "http",
-        routers_str = "mictlanx-router-0:localhost:60666"
     )
     # bids = ["axo","b1","bao","baox"]
     # for bid in bids:
@@ -75,7 +73,7 @@ def make_blobs_for_class(base_key: str, bucket_id: str, class_name: str, *, gree
 
 @pytest.fixture
 def storage_service() -> MictlanXStorageService:
-    return MictlanXStorageService(protocol="http")
+    return MictlanXStorageService()
 
 @pytest.fixture
 def axo_storage(storage_service):

@@ -11,7 +11,7 @@ from option import Err, Ok, Result
 import json as J
 # MictlanX 
 from mictlanx.utils.index import Utils
-from mictlanx.v4.asyncx import AsyncClient
+from mictlanx import AsyncClient
 # 
 from axo.log import get_logger
 from axo.storage.types import StorageService,BucketId,BallId,AxoStorageMetadata
@@ -318,10 +318,10 @@ class MictlanXStorageService(StorageService):
         self,
         mictlanx_id: str = "axo-mictlanx",
         bucket_id: str = "axo-mictlanx",
-        routers_str: str = "mictlanx-router-0:localhost:60666",
-        protocol: str = "https",
+        uri: str = "mictlanx://mictlanx-router-0@localhost:60666?/api_version=4&protocol=http",
+        # protocol: str = "https",
         max_workers: int = 4,
-        log_path: str = "./log",
+        log_path: str = "/log",
         debug: bool = True,
         client: Optional[AsyncClient] = None,
     ) -> None:
@@ -329,16 +329,16 @@ class MictlanXStorageService(StorageService):
 
         # Environment overrides
         self.default_bucket_id = os.environ.get("MICTLANX_BUCKET_ID", bucket_id)
-        routers_str            = os.environ.get("MICTLANX_ROUTERS", routers_str)
-        protocol               = os.environ.get("MICTLANX_PROTOCOL", protocol)
-        routers                = list(Utils.routers_from_str(routers_str, protocol=protocol))
+        # routers_str            = os.environ.get("MICTLANX_ROUTERS", routers_str)
+        # protocol               = os.environ.get("MICTLANX_PROTOCOL", protocol)
+        # routers                = list(Utils.routers_from_str(routers_str, protocol=protocol))
 
         self.client: AsyncClient = (
             client
             if client is not None
             else AsyncClient(
+                uri             = uri,
                 client_id       = os.environ.get("MICTLANX_CLIENT_ID", mictlanx_id),
-                routers         = routers,
                 max_workers     = int(os.environ.get("MICTLANX_MAX_WORKERS", max_workers)),
                 debug           = debug,
                 log_output_path = os.environ.get("MICTLANX_LOG_OUTPUT_PATH", log_path),
@@ -461,23 +461,30 @@ class MictlanXStorageService(StorageService):
                 bucket_id = bucket_id or self.default_bucket_id,
                 ball_id   = key,
             )
-            if r.is_ok:
-                mm    = r.unwrap()
-                dicts = map(lambda x:x.tags,mm.chunks)
-                tags  = MictlanXStorageService.merge_dicts_list(dicts)
-                # reduce(lambda x: self.merge_dicts(),dicts)
-                asm = AxoStorageMetadata(
-                    key          = key,
-                    bucket_id    = bucket_id,
-                    ball_id      = mm.ball_id,
-                    checksum     = mm.checksum,
-                    content_type = "application/octet-stream",
-                    size         = mm.size,
-                    is_disabled  = False,
-                    producer_id  = mm.chunks[0].producer_id,
-                    tags         = tags,
-                )
-                return Ok(asm)
+            # if r.is_ok:
+            if r.is_err:
+                me = r.unwrap_err()
+                et = AxoErrorType.GET_METADATA_FAILED
+                if me.status_code == 404:
+                    et = AxoErrorType.NOT_FOUND
+                return Err(self._mk_axo_error(et, me))
+            
+            mm    = r.unwrap()
+            dicts = map(lambda x:x.tags,mm.chunks)
+            tags  = MictlanXStorageService.merge_dicts_list(dicts)
+            # reduce(lambda x: self.merge_dicts(),dicts)
+            asm = AxoStorageMetadata(
+                key          = key,
+                bucket_id    = bucket_id,
+                ball_id      = mm.ball_id,
+                checksum     = mm.checksum,
+                content_type = "application/octet-stream",
+                size         = mm.size,
+                is_disabled  = False,
+                producer_id  = mm.chunks[0].producer_id,
+                tags         = tags,
+            )
+            return Ok(asm)
         except Exception as e:
             return Err(self._mk_axo_error(AxoErrorType.TRANSPORT_ERROR, e))
 

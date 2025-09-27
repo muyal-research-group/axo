@@ -7,7 +7,7 @@ import humanfriendly as  HF
 from axo.endpoint import EndpointManagerX
 from axo.storage import StorageService
 import cloudpickle as CP
-from mictlanx.v4.client import Client as MictlanXClient
+from mictlanx import AsyncClient as MictlanXClient
 from mictlanx.utils.index import Utils as UtilsX
 from concurrent.futures import ProcessPoolExecutor,as_completed
 import os 
@@ -25,10 +25,11 @@ MICTLANX_DEBUG             = bool(int(os.environ.get("MICTLANX_DEBUG","1")))
 MICTLANX_MAX_WORKERS       = int(os.environ.get("MICTLANX_MAX_WORKERS","2"))
 MICTLANX_LOG_PATH          = os.environ.get("MICTLANX_LOG_PATH","./log")
 SOURCE_PATH                = os.environ.get("SOURCE_PATH","./source")
-routers = list(UtilsX.routers_from_str(os.environ.get("MICTLANX_ROUTERS","mictlanx-router-0:localhost:60666")))
+# routers = list(UtilsX.routers_from_str(os.environ.get("MICTLANX_ROUTERS","mictlanx-router-0:localhost:60666")))
 client = MictlanXClient(
     client_id      = MICTLANX_CLIENT_ID,
-    routers         = routers,
+    uri = "",
+    # routers         = routers,
     debug           = MICTLANX_DEBUG,
     max_workers     = MICTLANX_MAX_WORKERS,
     bucket_id       = MICTLANX_DEFAULT_BUCKET_ID,

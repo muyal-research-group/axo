@@ -51,7 +51,7 @@ async def test_scenario1_full(dem: DistributedEndpointManager):
     acm = AxoContextManager.distributed(
         endpoint_manager = dem,
         storage_service  = Some(
-            MictlanXStorageService(protocol="http")
+            MictlanXStorageService()
         )
     )
 

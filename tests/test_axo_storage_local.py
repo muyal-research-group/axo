@@ -9,6 +9,7 @@ from axo.storage.utils import StorageUtils as SU
 def bucket_id():
     return "test-bucket"
 
+
 @pytest.fixture
 def base_key():
     return "obj-123"

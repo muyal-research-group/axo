@@ -22,18 +22,21 @@ import logging
 import types,inspect
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict,  TypeVar
+from typing import Any, Callable, Dict,  TypeVar,TYPE_CHECKING,List
+# from typing import TYPE_CHECKING,List
 # 
 import cloudpickle as cp
 import humanfriendly as hf
 import zmq
 from option import Err, Ok, Result
 # 
-from axo.models import AxoRequestEnvelope,AxoReplyEnvelope,AxoReplyMsg,Ping,PutMetadata,MethodExecution
+from axo.core.decorators import AxoContext
+# from axo.models import AxoRequestEnvelope,AxoReplyEnvelope,AxoReplyMsg,Ping,PutMetadata,MethodExecution
+import axo.models as AXOMODELS
 from axo.enums import AxoOperationType
 from axo.storage.types import AxoStorageMetadata
+from axo.core.models import BallRef
 
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from axo.core.axo import Axo  # type-only; not executed at runtime
 # ──────────────────────────────────────────────────────────────────────────────
@@ -110,6 +113,28 @@ class EndpointX(ABC):
     ) -> Result[Any, Exception]: ...
 
     @abstractmethod
+    def task_execution(
+        self,
+        fname: str,
+        ao: Axo,
+        ctx:AxoContext,
+        fargs: list[Any] = [],
+        fkwargs: dict[str, Any] = {},
+    ):
+        pass
+    
+    @abstractmethod
+    def stream_execution(
+        self,
+        fname: str,
+        ao: Axo,
+        ctx:AxoContext,
+        fargs: list[Any] = [],
+        fkwargs: dict[str, Any] = {},
+    ):
+        pass
+
+    @abstractmethod
     def add_code(self, ao: Axo) -> Result[bool, Exception]: ...
 
     @abstractmethod
@@ -117,10 +142,10 @@ class EndpointX(ABC):
         self, class_def: Any, *, bucket_id: str = "", key: str = ""
     ) -> Result[bool, Exception]: ...
 
-    @abstractmethod
-    def task_execution(
-        self, task_function: GenericFunction, *, payload: Dict[str, Any] | None = None
-    ) -> Result[Any, Exception]: ...
+    # @abstractmethod
+    # def task_execution(
+    #     self, task_function: GenericFunction, *, payload: Dict[str, Any] | None = None
+    # ) -> Result[Any, Exception]: ...
 
     @abstractmethod
     def elasticity(self, rf: int) -> Result[Any, Exception]: ...
@@ -185,10 +210,15 @@ class LocalEndpoint(EndpointX):
         return Ok(False)
 
     # -- Misc ------------------------------------------------------------
-    def task_execution(
-        self, task_function: GenericFunction, *, payload: Dict[str, Any] | None = None
-    ) -> Result[Any, Exception]:
-        return Err(Exception("Task execution not supported in LocalEndpoint"))
+    def task_execution(fname, ao, config, fargs = [], fkwargs = {}):
+        return super().task_execution(ao, config, fargs, fkwargs)
+    
+    def stream_execution(fname, ao, config, fargs = [], fkwargs = {}):
+        return super().stream_execution(ao, config, fargs, fkwargs)
+    # def task_execution(
+    #     self, task_function: GenericFunction, *, payload: Dict[str, Any] | None = None
+    # ) -> Result[Any, Exception]:
+    #     return Err(Exception("Task execution not supported in LocalEndpoint"))
 
     def elasticity(self, rf: int) -> Result[Any, Exception]:
         return Err(Exception("Elasticity not applicable in LocalEndpoint"))
@@ -273,7 +303,7 @@ class DistributedEndpoint(EndpointX):
                     self._last_ping_at == -1
                     or time.time() - self._last_ping_at >= self._ping_interval
                 ):
-                    self._req.send_multipart(Ping().to_frames() )
+                    self._req.send_multipart(AXOMODELS.Ping().to_frames() )
                     _ = self._req.recv_multipart()
                     self._last_ping_at = time.time()
                     self._connected = True
@@ -300,12 +330,12 @@ class DistributedEndpoint(EndpointX):
         try:
             if not self._ensure_connection():
                 return Err(Exception("Unable to connect"))
-            ping_msg = Ping()
+            ping_msg = AXOMODELS.Ping()
             self._req.send_multipart(ping_msg.to_frames())
             # self._req.send_multipart([b"axo", b"PING", b"{}"])
             
             frames = self._req.recv_multipart()
-            req = AxoReplyMsg.from_frames(frames)
+            req = AXOMODELS.AxoReplyMsg.from_frames(frames)
             print("PING_RES",req)
             return Ok(True)
         except Exception as e:
@@ -319,10 +349,10 @@ class DistributedEndpoint(EndpointX):
 
         # payload = json.dumps(value.model_dump()).encode(self.encoding)
         try:
-            msg = PutMetadata(metadata=value)
+            msg = AXOMODELS.PutMetadata(metadata=value)
             self._req.send_multipart(msg.to_frames())
             frames = self._req.recv_multipart()
-            reply_res = AxoReplyMsg.from_frames(frames=frames,expect_operation=AxoOperationType.PUT_METADATA)
+            reply_res = AXOMODELS.AxoReplyMsg.from_frames(frames=frames,expect_operation=AxoOperationType.PUT_METADATA)
             if reply_res.is_err:
                 return Err(reply_res.unwrap_err())
             (reply,_) = reply_res.unwrap()
@@ -356,7 +386,7 @@ class DistributedEndpoint(EndpointX):
             # print("METHO EXECUTION!",fkwargs,fargs)
             if "storage" in fkwargs:
                 del fkwargs["storage"]
-            msg = MethodExecution(
+            msg = AXOMODELS.MethodExecution(
                 method= fname,
                 fargs=fargs,
                 fkwargs=fkwargs,
@@ -366,7 +396,7 @@ class DistributedEndpoint(EndpointX):
             # print("FRAMES",len(frames))
             self._req.send_multipart(msg.to_frames())
             frames = self._req.recv_multipart()
-            reply_res = AxoReplyMsg.from_frames(frames=frames,expect_operation=AxoOperationType.METHOD_EXEC)
+            reply_res = AXOMODELS.AxoReplyMsg.from_frames(frames=frames,expect_operation=AxoOperationType.METHOD_EXEC)
             if reply_res.is_err:
                 return Err(reply_res.unwrap_err())
             (reply,payload) = reply_res.unwrap()
@@ -374,23 +404,7 @@ class DistributedEndpoint(EndpointX):
             if len(payload) >0:
                 f_result = Ok(cp.loads(payload[0]))
             return f_result
-            #     [
-            #         b"axo",
-            #         b"METHOD.EXEC",
-            #         payload,
-            #         # cp.dumps(f),
-            #         cp.dumps(fargs or []),
-            #         cp.dumps(fkwargs or {}),
-            #     ]
-            # )
-            # resp = self._req.recv_multipart()
-            # if len(resp) != 5:
-            #     return Err(Exception("Unexpected response length"))
-            # _, _, status_b, meta_b, result_b = resp
-            # status = int.from_bytes(status_b, "little", signed=True)
-            # if status < 0:
-            #     return Err(Exception("Remote execution failed"))
-            # return Ok(self._deserialize(result_b))
+  
         except Exception as exc:
             self._cleanup()
             return Err(exc)
@@ -409,10 +423,48 @@ class DistributedEndpoint(EndpointX):
     # ------------------------------------------------------------------ #
     # Task & elasticity helpers
     # ------------------------------------------------------------------ #
-    def task_execution(
-        self, task_function: GenericFunction, *, payload: Dict[str, Any] | None = None
-    ) -> Result[Any, Exception]:
-        return Err(Exception("TASK.EXEC not implemented yet"))
+    
+    def task_execution(self,fname:str, ao:Axo, ctx:AxoContext, fargs:List[Any] = [], fkwargs:Dict[str,Any] = {})->Result[Any,Exception]:
+        if not self._ensure_connection():
+            return Err(Exception("Unable to connect"))
+
+        try:
+            msg = AXOMODELS.TaskExecution(
+                method   = fname,
+                fargs    = fargs,
+                fkwargs  = fkwargs,
+                ctx      = ctx,
+                metadata = ao._acx_metadata,
+            )
+
+            
+            self._req.send_multipart(msg.to_frames())
+            frames = self._req.recv_multipart()
+            reply_res = AXOMODELS.AxoReplyMsg.from_frames(frames=frames,expect_operation=AxoOperationType.TASK_EXEC)
+            if reply_res.is_err:
+                return Err(reply_res.unwrap_err())
+            (reply,payload) = reply_res.unwrap()
+            print(reply,payload)
+            if len(payload) >0:
+                ball_ref = BallRef.model_validate_json(payload[0])
+
+                return Ok(ball_ref)
+            return Err(Exception("No payload received") )
+                # f_result = Ok(cp.loads(payload[0]))
+                # print("F_RESULT",f_result)
+                # return Ok(f_result)
+            # return Ok("TASK_EXCECUTION")
+
+        except Exception as exc:
+            self._cleanup()
+            return Err(exc)
+        # return Ok(2)
+        # return super().task_execution(ao, config, fargs, fkwargs)
+    
+    def stream_execution(self,fname, ao, ctx, fargs = [], fkwargs = {})->Result[List[Any],Exception]:
+        return super().stream_execution(ao, ctx, fargs, fkwargs)
+    
+
 
     def elasticity(self, rf: int) -> Result[Any, Exception]:
         return Err(Exception("ELASTICITY not implemented yet"))

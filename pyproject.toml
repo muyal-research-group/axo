@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "axo"
-version = "0.0.3a1"
+version = "0.0.4a0"
 description = "Axo is an active object system designed to empower users with the ability to effortlessly create and manage highly available objects. ActiveX easily mix storage and processing."
 authors = ["Ignacio Castillo <ignacio.bcastillo@gmail.com>"]
 readme = "README.md"
@@ -12,7 +12,7 @@ option = "^2.1.0"
 nanoid = "^2.0.0"
 pydantic = "^2.7.0"
 pyzmq = "^26.0.3"
-mictlanx = "0.0.161a40"
+mictlanx = "0.1.0a2"
 wrapt = "^1.17.2"
 
 [tool.poetry.group.dev.dependencies]

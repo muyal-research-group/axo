@@ -12,25 +12,24 @@ from axo.storage import AxoStorage
 async def before_all_tests():
     ss = MictlanXStorageService(
         bucket_id   = "b1",
-        protocol    = "http",
-        routers_str = "mictlanx-router-0:localhost:60666"
     )
     bids = ["axo","b1","bao","baox"]
     for bid in bids:
         res = await ss.client.delete_bucket(bid)
         print(f"BUCKET [{bid}] was clean")
     yield
+
 class Calculator(Axo):
     from typing import List
     @axo_method
-    def sum(self, xs:List[float],**kwargs):
-        print(kwargs)
+    def sum(self, xs:List[float],**kwargs)->float:
         return sum(xs)
     
     @axo_method
     def substract(self, xs:List[float],**kwargs)->float:
         from functools import reduce
         return reduce(lambda x,y: x-y, xs)
+
     @axo_method
     def divide(self, xs:List[float],**kwargs)->float:
         from functools import reduce
@@ -48,17 +47,17 @@ class Calculator(Axo):
 def dem():
     dem = DistributedEndpointManager()
     dem.add_endpoint(
-        endpoint_id="axo-endpoint-0",
-        hostname="localhost",
-        protocol="tcp",
-        req_res_port=16667,
-        pubsub_port=16666
+        endpoint_id  = "axo-endpoint-0",
+        hostname     = "localhost",
+        protocol     = "tcp",
+        req_res_port = 16667,
+        pubsub_port  = 16666
     )
     return dem
 
 @pytest.fixture
 def storage_service() -> StorageService:
-    return MictlanXStorageService(protocol="http")
+    return MictlanXStorageService()
 # 
 # @pytest.fixture
 # def axo_storage(storage_service):
@@ -69,7 +68,7 @@ def storage_service() -> StorageService:
 def test_local():
     with AxoContextManager.local() as cmx:
         c:Calculator = Calculator()
-        res = c.sum([0,1,2])
+        res = c.sum([0,1,2],axo_endpoint_id = "axo1111")
         print(res)
 
 
@@ -90,6 +89,7 @@ async def test_distributed(dem:DistributedEndpointManager,storage_service:Storag
         res = c.divide([3,2,1])
         print(res)
 
+@pytest.mark.skip(reason="Needs Axo Endpoint v0.0.4")
 @pytest.mark.asyncio
 async def test_get_ao(dem:DistributedEndpointManager,storage_service:StorageService):
     with AxoContextManager.distributed( endpoint_manager= dem,storage_service=storage_service) as cmx:
@@ -103,7 +103,12 @@ async def test_get_ao(dem:DistributedEndpointManager,storage_service:StorageServ
         # print("AXO_KEY",a)
         res = await c.persistify()
         assert res.is_ok
-        ao = await Axo.get_by_key(bucket_id=axo_bucket_id,key=axo_key )
+
+        ao = await Axo.get_by_key(
+            bucket_id=axo_bucket_id,
+            key=axo_key 
+        )
+
         assert ao.is_ok
         calc = ao.unwrap()
         # print("CALC",calc)

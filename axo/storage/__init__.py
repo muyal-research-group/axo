@@ -1,5 +1,4 @@
 from axo.storage.services import StorageService
-from typing import Optional,List
 from option import Result,Ok,Err
 from axo.errors import AxoError,AxoErrorType
 from axo.storage.types import (
@@ -114,7 +113,7 @@ class AxoStorage:
                 )
             )
 
-        # 2) put attrs (best-effort rollback on failure)
+        # 2) put attrs 
         r2 = await self.storage.put(
             bucket_id  = bucket_id,
             key        = expected_attr_key,

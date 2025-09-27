@@ -1,9 +1,23 @@
 import pytest
+import pytest_asyncio
 # 
 from axo.storage import AxoStorage
 from axo.storage.types import StorageService,AxoObjectBlobs,AxoStorageMetadata,AxoObjectBlob
 from axo.storage.services import MictlanXStorageService
 from axo.storage.utils import StorageUtils as SU
+
+@pytest_asyncio.fixture(scope="session", autouse=True)
+# @pytest.mark.asyncio
+async def before_all_tests():
+    ss = MictlanXStorageService(
+        uri = "mictlanx://mictlanx-router-0@localhost:60666?/api_version=4&protocol=http"
+    )
+    bids = ["axo","b1","bao","baox","test-bucket"]
+    for bid in bids:
+        res = await ss.client.delete_bucket(bid)
+        print(f"BUCKET [{bid}] was clean")
+    yield
+
 
 @pytest.fixture
 def bucket_id():
@@ -19,7 +33,7 @@ def class_name():
 
 @pytest.fixture
 def storage_service() -> StorageService:
-    return MictlanXStorageService(protocol="http")
+    return MictlanXStorageService()
 
 @pytest.fixture
 def axo_storage(storage_service):
