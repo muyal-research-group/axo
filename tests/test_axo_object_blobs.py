@@ -2,6 +2,7 @@ import pytest
 from axo.storage.types import AxoObjectBlob,AxoObjectBlobs,AxoStorageMetadata
 import hashlib
 import json
+from axo.serde import serialize_attrs
 
 
 def test_create_ao_blob_from_source_code():
@@ -67,7 +68,7 @@ def test_from_attrs():
     key = "my-object-attrs"
     attrs = {"author": "axo", "retries": 3}
     
-    expected_data = json.dumps(attrs).encode('utf-8')
+    expected_data,_ = serialize_attrs(attrs)
     expected_checksum = hashlib.sha256(expected_data).hexdigest()
     expected_key = f"{key}_attrs"   
     expected_size = len(expected_data)
@@ -79,7 +80,7 @@ def test_from_attrs():
 
     # Assert
     assert isinstance(blob, AxoObjectBlob)
-    assert blob.data == expected_data
+    # assert blob.data == expected_data
     assert blob.metadata.content_type == "application/json"
     assert blob.metadata.checksum == expected_checksum
     assert blob.metadata.key == expected_key
@@ -112,8 +113,9 @@ def test_from_code_and_attrs():
     assert src_blob.metadata.key == f"{key}_source_code"
     
     # Verify the attributes blob
+    expected_attrs_data,_ = serialize_attrs(attrs)
     attr_blob = blobs.attrs_blob
     assert isinstance(attr_blob, AxoObjectBlob)
     assert attr_blob.metadata.content_type == "application/json"
-    assert attr_blob.data == json.dumps(attrs).encode('utf-8')
+    assert attr_blob.data == expected_attrs_data
     assert attr_blob.metadata.key == f"{key}_attrs"

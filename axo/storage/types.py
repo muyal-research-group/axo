@@ -1,10 +1,11 @@
 from abc import ABC,abstractmethod
-from typing import Dict,Iterator,Optional
+from typing import Dict,Iterator,Optional,Any
 from option import Result
 from pydantic import BaseModel,Field
 from axo.errors import AxoError,AxoErrorType
 from xolo.utils.utils import Utils as XoloUtils
-import json
+from axo.serde import serialize_attrs
+# import json
 # from axo.storage.utils import StorageUtils as SU
 
 ChunkIter   = Iterator[bytes]
@@ -56,8 +57,9 @@ class AxoObjectBlob:
         )        
         return axo_blob
     @staticmethod
-    def from_attrs(bucket_id:str,key:str,attrs:Dict[str,any],producer_id:str="axo",tags:Dict[str,str]={}):
-        attrs_data = json.dumps(attrs).encode('utf-8') 
+    def from_attrs(bucket_id:str,key:str,attrs:Dict[str,Any],producer_id:str="axo",tags:Dict[str,str]={}):
+        (attrs_data,ct) = serialize_attrs(attrs)
+        # json.dumps(attrs).encode('utf-8') 
         attr_key =  f"{key}_attrs"
         attrs_checksum = XoloUtils.sha256(attrs_data)
         axo_blob = AxoObjectBlob(
@@ -71,7 +73,7 @@ class AxoObjectBlob:
                 is_disabled  = False,
                 tags         = tags,
                 producer_id  = producer_id,
-                content_type = "application/json",
+                content_type = ct,
             )
         )        
         return axo_blob

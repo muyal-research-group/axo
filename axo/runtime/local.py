@@ -35,6 +35,7 @@ from axo.storage import AxoStorage
 from axo.log import get_logger
 from axo.models import Task
 from axo.errors import AxoError,AxoErrorType
+from axo.helpers import serialize_blobs_from_instance
 # --------------------------------------------------------------------------- #
 # Logger (module‑local)
 # --------------------------------------------------------------------------- #
@@ -148,7 +149,7 @@ class LocalRuntime(ActiveXRuntime,Thread):
                 return Err(AxoError.make(AxoErrorType.INTERNAL_ERROR, str(meta_res.unwrap_err())))
 
             # 2) build blobs + store via AxoStorage
-            blobs_res = self._build_blobs_from_instance(instance, bucket_id=bucket_id, key=key)
+            blobs_res = serialize_blobs_from_instance(instance, bucket_id=bucket_id, key=key)
             if blobs_res.is_err:
                 return Err(blobs_res.unwrap_err())
             blobs, class_name = blobs_res.unwrap()
