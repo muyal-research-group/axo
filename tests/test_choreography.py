@@ -30,6 +30,7 @@ class GrayScaler(Axo):
     
 class Compresser(Axo):
     from axo.core.models import AxoContext
+    
     @axo_task(source_bucket="bkw",sink_bucket="sinkbucketx")
     def zip(
         self,
