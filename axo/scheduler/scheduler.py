@@ -37,7 +37,13 @@ from axo.log import get_logger
 # Logger
 # --------------------------------------------------------------------------- #
 # AXO_LOG_PATH = 
-logger = get_logger(name=__name__, ltype="JSON",debug=True)
+logger = get_logger(
+    name  = __name__ ,
+    ltype = os.environ.get("AXO_LOG_TYPE","json") ,
+    debug = os.environ.get("AXO_DEBUG","1")       == "1",
+    path  = os.environ.get("AXO_LOG_PATH","/log") ,
+
+)
 
 
 # ============================================================================

@@ -20,8 +20,14 @@ from axo.errors import AxoError,AxoErrorType
 from axo.storage import AxoStorage
 from axo.storage.loader import AxoLoader
 from axo.helpers import serialize_blobs_from_instance
+import os
 
-logger = get_logger(name= __name__)
+logger = get_logger(
+    name  = __name__ ,
+    ltype = os.environ.get("AXO_LOG_TYPE","json") ,
+    debug = os.environ.get("AXO_DEBUG","1")       == "1",
+    path  = os.environ.get("AXO_LOG_PATH","/log") ,
+)
 _ALPHABET = string.digits + string.ascii_lowercase
 
     

@@ -17,6 +17,7 @@ Because everything runs in‑process, no network calls are performed, making
 """
 
 from __future__ import annotations
+import os
 from typing import TYPE_CHECKING,Dict,Any
 from weakref import WeakKeyDictionary
 import time as T
@@ -39,7 +40,13 @@ from axo.helpers import serialize_blobs_from_instance
 # --------------------------------------------------------------------------- #
 # Logger (module‑local)
 # --------------------------------------------------------------------------- #
-logger = get_logger(name=__name__)
+
+logger = get_logger(
+    name  = __name__ ,
+    ltype = os.environ.get("AXO_LOG_TYPE","json") ,
+    debug = os.environ.get("AXO_DEBUG","1")       == "1",
+    path  = os.environ.get("AXO_LOG_PATH","/log") ,
+)
 # logging.getLogger(__name__)
 
 

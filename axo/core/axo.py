@@ -49,14 +49,17 @@ from axo.core.models import MetadataX
 from axo.helpers import _generate_id
 from axo.environment import AXO_ID_SIZE
 # ───────────────────────────────────────────────────────────────── constants ─
-AXO_DEBUG = bool(int(os.getenv("AXO_DEBUG", "1")))
-AXO_PRODUCTION_LOG_ENABLE = bool(int(os.getenv("AXO_PRODUCTION_LOG_ENABLE", "0")))
-AXO_LOG_PATH = os.getenv("AXO_LOG_PATH", "/axo/log")
-AXO_PROPERTY_PREFIX = "_acx_property_"
+# AXO_DEBUG                 = bool(int(os.getenv("AXO_DEBUG", "1")))
+# AXO_PROPERTY_PREFIX = "_acx_property_"
 
 
 # ─────────────────────────────────────────────────────── logger configuration
-logger = get_logger(name=__name__)
+logger = get_logger(
+    name  = __name__ ,
+    ltype = os.environ.get("AXO_LOG_TYPE","json") ,
+    debug = os.environ.get("AXO_DEBUG","1")       == "1",
+    path  = os.environ.get("AXO_LOG_PATH","/log") ,
+)
 
 R = TypeVar("R")  # generic return type for Axo.call
 # =========================================================================== #
