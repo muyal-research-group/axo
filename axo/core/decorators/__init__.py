@@ -57,7 +57,7 @@ import os
 logger = get_logger(
     name  = __name__ ,
     ltype = os.environ.get("AXO_LOG_TYPE","json") ,
-    debug = os.environ.get("AXO_DEBUG","1")       == "1",
+    debug = os.environ.get("AXO_DEBUG","1")== "1",
     path  = os.environ.get("AXO_LOG_PATH","/log") ,
 )
 R = TypeVar("R")  # generic return type for Axo.call
