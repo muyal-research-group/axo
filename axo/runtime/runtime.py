@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 # ────────────────────────────────────────────────────────────────── stdlib ──
+import os
 from abc import ABC, abstractmethod
 import json as J
 from queue import Queue
@@ -25,7 +26,12 @@ if TYPE_CHECKING:
 
 
 # ────────────────────────────────────────────────────────────── logging set‑up
-logger = get_logger(name=__name__)
+logger = get_logger(
+    name  = __name__ ,
+    ltype = os.environ.get("AXO_LOG_TYPE","json") ,
+    debug = os.environ.get("AXO_DEBUG","1")       == "1",
+    path  = os.environ.get("AXO_LOG_PATH","/log") ,
+)
 
 # ─────────────────────────────────────────────────────────────── typing alias
 

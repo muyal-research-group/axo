@@ -5,8 +5,8 @@ from logging.handlers import TimedRotatingFileHandler
 import json
 import threading
 from option import NONE,Option
-import csv
-import io
+# import csv
+# import io
 
 class JsonFormatter(logging.Formatter):
     def format(self, record):

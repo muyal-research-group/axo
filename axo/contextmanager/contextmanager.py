@@ -16,7 +16,14 @@ from nanoid import generate as nanoid
 from queue import Queue
 import string
 import time as T
-logger = get_logger(name= __name__)
+import os
+
+logger = get_logger(
+    name= __name__,
+    ltype = os.environ.get("AXO_LOG_TYPE","json") ,
+    debug = os.environ.get("AXO_DEBUG","1")       == "1",
+    path  = os.environ.get("AXO_LOG_PATH","/log") ,
+)
 class AxoContextManager:
     
     def __init__(self, runtime:Optional[ActiveXRuntime] = None):
