@@ -67,7 +67,7 @@ class LocalEndpointManager(_BaseEndpointManager,EndpointManagerP[LocalEndpoint])
         if endpoint_id in self.endpoints:
             self.n+= 1 
             return self.endpoints.get(endpoint_id)
-        print("ENDPOITNS",self.endpoints)
+        # print("ENDPOITNS",self.endpoints)
         return list(self.endpoints.values())[self.n % len(self.endpoints)]
         # next(iter(self.endpoints.values()))  # first/only element
 

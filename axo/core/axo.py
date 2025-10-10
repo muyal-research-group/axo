@@ -34,7 +34,8 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
-    List
+    List, 
+    Optional
 )
 
 # ─────────────────────────────────────────────────────────────── 3rd‑party ──
@@ -173,6 +174,7 @@ class Axo(metaclass=AxoMeta):
             obj._acx_metadata.axo_bucket_id        = kwargs.get("axo_bucket_id",obj._acx_metadata.axo_bucket_id)
             obj._acx_metadata.axo_source_bucket_id = kwargs.get("axo_source_bucket_id",obj._acx_metadata.axo_source_bucket_id)
             obj._acx_metadata.axo_sink_bucket_id   = kwargs.get("axo_sink_bucket_id",obj._acx_metadata.axo_sink_bucket_id)
+            
             obj._acx_metadata.axo_key              = kwargs.get("axo_key",obj._acx_metadata.axo_key)
             obj._acx_metadata.axo_alias            = kwargs.get("axo_alias",obj._acx_metadata.axo_alias)
             obj._acx_metadata.axo_version          = kwargs.get("axo_version",obj._acx_metadata.axo_version)

@@ -20,6 +20,7 @@ class TaskStatus(Enum):
 
 class AxoErrorType(StrEnum):
     DELETE_FAILED           = "DELETE_FAILED"
+    ENDPOINT_DEPLOY_FAILED   = "ENDPOINT_DEPLOY_FAILED"
 
     PUT_DATA_FAILED         = "PUT_DATA_FAILED"
     PUT_METADATA_FAILED     = "PUT_METADATA_FAILED"
@@ -64,6 +65,7 @@ class AxoErrorCode(IntEnum):
     NOT_LEADER           = -530
     TRANSPORT_ERROR      = -540
     INTERNAL_ERROR       = -599
+    ENDPOINT_DEPLOY_FAILED = -600
     
 
 class AxoOperationType(StrEnum):

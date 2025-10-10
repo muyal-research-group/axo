@@ -1,6 +1,6 @@
 import pytest
 import pytest_asyncio
-from axo import Axo,axo_method
+from axo import Axo,axo_method,axo_task
 from axo.contextmanager import AxoContextManager
 from axo.endpoint.manager import DistributedEndpointManager
 from axo.storage.services import MictlanXStorageService
@@ -19,8 +19,19 @@ async def before_all_tests():
         print(f"BUCKET [{bid}] was clean")
     yield
 
+
+
+
+
 class Calculator(Axo):
+
     from typing import List
+    # @axo_method, @axo_task @axo_stream(in working progress)
+    @axo_task(source_bucket="b1", sink_bucket="b1")
+    def otro_ejemplo(self):
+        ...
+
+
     @axo_method
     def sum(self, xs:List[float],**kwargs)->float:
         return sum(xs)
@@ -64,10 +75,43 @@ def storage_service() -> StorageService:
     # return AxoStorage(storage=storage_service)
 
 
-# @pytest.mark.asyncio
-def test_local():
+@pytest.mark.asyncio
+async def test_local():
     with AxoContextManager.local() as cmx:
+        
         c:Calculator = Calculator()
+        ao_result = await Axo.get_by_key(bucket_id="BUCKET_ID",key="ao1")
+        
+        assert ao_result.is_ok
+        coreography_alias = "Calculator.sum"
+        coreography_params = {
+            "x":2,
+            "y":3
+        }
+
+        (class_name, method_name) = coreography_alias.split("."
+                                                            )
+        ao     = ao_result.unwrap()
+        ao.set_source_bucket_id("B1")
+        ao.set_sink_bucket_id("B2")
+
+        method = getattr(ao, method_name)
+        parametros_del_siguiente_ao = method(**coreography_params)
+
+        ao2_result  = await Axo.get_by_key(bucket_id="CUBET2ON",key="ao2")
+
+        assert ao2_result.is_ok
+        ao2         = ao2_result.unwrap()
+        ao2.set_source_bucket_id("BUCKET_GRAPH")
+        ao2.set_source_bucket_id("BUCKET_GRAPH_SALIDA")
+
+        method2     = getattr(ao2, "multiply")
+        final_result = method2(parametros_del_siguiente_ao)
+
+
+        c.set_source_bucket_id("B1")
+        c.set_sink_bucket_id("B2")
+
         res = c.sum([0,1,2],axo_endpoint_id = "axo1111")
         print(res)
 

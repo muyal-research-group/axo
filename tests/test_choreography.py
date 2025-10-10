@@ -31,10 +31,10 @@ class GrayScaler(Axo):
 class Compresser(Axo):
     from axo.core.models import AxoContext
     
-    @axo_task(source_bucket="bkw",sink_bucket="sinkbucketx")
+    @axo_task()
     def zip(
         self,
-        source: bytes,
+        source: bytes=b"",
         name:str = "payload",
         *,
         ctx: AxoContext = AxoContext(),
@@ -54,10 +54,10 @@ class Compresser(Axo):
 
         return buf.getvalue()
 
-    @axo_task(source_bucket="sinkbucketx",sink_bucket="uncompressedbucket")
+    @axo_task()
     def unzip(
         self,
-        source: bytes,
+        source: bytes=b"",
         name:str = "payload",
         *,
         ctx: AxoContext = AxoContext(),
@@ -111,7 +111,7 @@ def storage_service() -> StorageService:
     return MictlanXStorageService()
 
 
-@pytest.mark.skip(reason="Needs Axo Endpoint v0.0.4")
+# @pytest.mark.skip(reason="Needs Axo Endpoint v0.0.4")
 @pytest.mark.asyncio
 async def test_pipeline(endpoint_manager:DistributedEndpointManager, storage_service:StorageService):
 
@@ -119,7 +119,9 @@ async def test_pipeline(endpoint_manager:DistributedEndpointManager, storage_ser
         # 1. Instantiate an "Active Object" of type Compresser.
         # This Active Object(AO) is initialized with identifiers for where it should be stored.
         c:Compresser = Compresser(axo_bucket_id="bcp-0", axo_key="cp-0") # or Axo.get_by_key(...)
-        
+        c.set_source_bucket_id("bkw") 
+        c.set_endpoint_id("axo-endpoint-0")
+        # print("ENDPONT_IDD", c.get_endpoint_id())  
         # 2. Persist the AO.
         # This saves the AO's code and initial configuration, making it usable later.
         assert (await c.persistify()).is_ok
@@ -127,7 +129,7 @@ async def test_pipeline(endpoint_manager:DistributedEndpointManager, storage_ser
         # 3. Execute the 'zip' method on the AO.
         # This sends the source bytes to be compressed by the AO's logic.
         # The operation returns a 'BallRef', which is a reference to the compressed output, not the data itself.
-        res:Result[BallRef,AxoError] = c.zip(source=b"HOLAAAAAAAAAAAAAAAAAAA", name="payload")
+        res:Result[BallRef,AxoError] = c.zip(source=b"", name="payload")
         assert res.is_ok
         # 4. Unwrap the result to get the reference to the compressed data.
         ball_ref = res.unwrap()
@@ -135,11 +137,15 @@ async def test_pipeline(endpoint_manager:DistributedEndpointManager, storage_ser
         # The '.to_pointer()' creates a handle to access the remote data,
         # and '.into_bytes()' downloads the data from storage.
         zip_result     = await ball_ref.to_pointer(storage_service,consume=True,delete_remote=False).into_bytes()
-        print(zip_result)
+        print("ZIP_RESULT",zip_result)
         assert zip_result.is_ok
         zip_bytes = zip_result.unwrap()
 
-        res:Result[BallRef,AxoError]  = c.unzip(archive=zip_bytes, name="payload")
+        c.set_source_bucket_id(ball_ref.bucket_id)
+        c.set_sink_bucket_id("uncompressedbucketx")
+        
+        res:Result[BallRef,AxoError]  = c.unzip(archive=b"", name="payload")
+        
         assert res.is_ok
         unzip_ball_ref = res.unwrap()
         unzip_result   = await unzip_ball_ref.to_pointer(storage_service,consume=True,delete_remote=False).into_bytes()

@@ -118,11 +118,30 @@ class DistributedRuntime(ActiveXRuntime,Thread):
             key = key or instance.get_axo_key()
 
             # 1) endpoint metadata
-            endpoint = self.__endpoint_manager.get_endpoint(instance.get_endpoint_id())
+            instances_eid = instance.get_endpoint_id()
+            # print("INSTANCES_EID", instances_eid)
+            endpoint = self.__endpoint_manager.get_endpoint(instances_eid )
+            # print("ENDPOINT", endpoint, endpoint.endpoint_id)
+
             if not endpoint:
-                return Err(AxoError.make(AxoErrorType.NOT_FOUND, f"No endpoint found: {instance.get_endpoint_id()}"))
+                logger.error({
+                    "error":"ENDPOINT.NOT_FOUND",
+                    "detail":f"No endpoint found: {instances_eid}",
+                    "mode":"DISTRIBUTED",
+                    "bucket_id":bucket_id,
+                    "key":key,
+                })
+                return Err(AxoError.make(AxoErrorType.NOT_FOUND, f"No endpoint found: {instances_eid}"))
+            
             meta_res = endpoint.put(key=key, value=instance._acx_metadata)
             if meta_res.is_err:
+                logger.error({
+                    "error":"ENDPOINT.PUT_FAILED",
+                    "detail":str(meta_res.unwrap_err()),
+                    "mode":"DISTRIBUTED",
+                    "bucket_id":bucket_id,
+                    "key":key,
+                })
                 return Err(AxoError.make(AxoErrorType.INTERNAL_ERROR, str(meta_res.unwrap_err())))
 
             # 2) blobs via AxoStorage

@@ -246,12 +246,6 @@ class PutMetadata(AxoRequestMsg):
         self,
         *,
         metadata:MetadataX,
-        # axo_endpoint_id: str="",
-        # axo_bucket_id: str="",
-        # axo_key: str="",
-        # axo_source_bucket_id: str="",
-        # axo_sink_bucket_id: str="",
-        # dependencies: Optional[List[str]] = None,
         allow_stale:bool = True,
         task_id: Optional[str] = None,
     ):

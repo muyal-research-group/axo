@@ -21,6 +21,18 @@ def dem():
 def storage_service() -> StorageService:
     return MictlanXStorageService()
 
+@pytest.mark.asyncio
+async def test_get_and_set_endpoint():
+    dog = Dog("dependency")
+    # eid = "e0"
+    eid = dog.get_endpoint_id()
+    print("EID", eid)
+    print("_acx_metadata", dog._acx_metadata.axo_endpoint_id)
+    dog.set_endpoint_id(endpoint_id=eid)
+    print("_acx_metadata", dog._acx_metadata.axo_endpoint_id)
+    assert eid == dog.get_endpoint_id()
+    print("_acx_metadata", dog._acx_metadata.axo_endpoint_id)
+    assert eid == dog.get_endpoint_id()
 
 def test_extend_dependencies():
     dog = Dog("dependency")
@@ -149,18 +161,18 @@ def test_ao_from_bytes():
     assert the_same_dog.name == dog.name
 
 
-@pytest.skip(reason="Needs Axo only to validate Cryptomesh AO serialization")
-@pytest.mark.asyncio
-async def test_get_ao(dem, storage_service):
-    with AxoContextManager.distributed(storage_service=storage_service,endpoint_manager=dem) as lrt:
-        ao1 = await Axo.get_by_key(bucket_id="7f5e5a62bcc24d4eb3398d508670f79b",key="exampleee")
-        assert ao1.is_ok
-        ao1_instance:Axo = ao1.unwrap()
+# @pytest.skip(reason="Needs Axo only to validate Cryptomesh AO serialization")
+# @pytest.mark.asyncio
+# async def test_get_ao(dem, storage_service):
+#     with AxoContextManager.distributed(storage_service=storage_service,endpoint_manager=dem) as lrt:
+#         ao1 = await Axo.get_by_key(bucket_id="7f5e5a62bcc24d4eb3398d508670f79b",key="exampleee")
+#         assert ao1.is_ok
+#         ao1_instance:Axo = ao1.unwrap()
         
-        ao1_instance.set_endpoint_id("axo-endpoint-0")
-        ao1_instance.set_source_bucket_id("7f5e5a62bcc24d4eb3398d508670f79b")
-        ao1_instance.set_sink_bucket_id("salida")
+#         ao1_instance.set_endpoint_id("axo-endpoint-0")
+#         ao1_instance.set_source_bucket_id("7f5e5a62bcc24d4eb3398d508670f79b")
+#         ao1_instance.set_sink_bucket_id("salida")
 
-        res = ao1_instance.zip(source=b"")
-        assert res.is_ok
-        print(res.unwrap())
+#         res = ao1_instance.zip(source=b"")
+#         assert res.is_ok
+#         print(res.unwrap())
