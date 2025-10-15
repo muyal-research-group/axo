@@ -111,7 +111,7 @@ def storage_service() -> StorageService:
     return MictlanXStorageService()
 
 
-# @pytest.mark.skip(reason="Needs Axo Endpoint v0.0.4")
+@pytest.mark.skip(reason="Needs Axo Endpoint v0.0.4a3")
 @pytest.mark.asyncio
 async def test_pipeline(endpoint_manager:DistributedEndpointManager, storage_service:StorageService):
 

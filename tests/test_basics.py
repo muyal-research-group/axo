@@ -89,8 +89,7 @@ async def test_local():
             "y":3
         }
 
-        (class_name, method_name) = coreography_alias.split("."
-                                                            )
+        (class_name, method_name) = coreography_alias.split(".")
         ao     = ao_result.unwrap()
         ao.set_source_bucket_id("B1")
         ao.set_sink_bucket_id("B2")
