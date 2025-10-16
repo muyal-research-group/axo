@@ -1,6 +1,6 @@
 import pytest
 import pytest_asyncio
-from axo import Axo,axo_method
+from axo import Axo,axo_method,axo_task
 from axo.contextmanager import AxoContextManager
 from axo.endpoint.manager import DistributedEndpointManager
 from axo.storage.services import MictlanXStorageService
@@ -19,8 +19,19 @@ async def before_all_tests():
         print(f"BUCKET [{bid}] was clean")
     yield
 
+
+
+
+
 class Calculator(Axo):
+
     from typing import List
+    # @axo_method, @axo_task @axo_stream(in working progress)
+    @axo_task(source_bucket="b1", sink_bucket="b1")
+    def otro_ejemplo(self):
+        ...
+
+
     @axo_method
     def sum(self, xs:List[float],**kwargs)->float:
         return sum(xs)
@@ -64,10 +75,14 @@ def storage_service() -> StorageService:
     # return AxoStorage(storage=storage_service)
 
 
-# @pytest.mark.asyncio
-def test_local():
+@pytest.mark.asyncio
+async def test_local():
     with AxoContextManager.local() as cmx:
+        
         c:Calculator = Calculator()
+        c.set_source_bucket_id("B1")
+        c.set_sink_bucket_id("B2")
+
         res = c.sum([0,1,2],axo_endpoint_id = "axo1111")
         print(res)
 

@@ -109,7 +109,7 @@ class AxoStorage:
             return Err(
                 AxoError.make(
                     error_type = AxoErrorType.STORAGE_ERROR,
-                    msg        = f"Failed to put {expected_src_key}"
+                    msg        = f"Failed to put {expected_src_key}: {r1.unwrap_err()}"
                 )
             )
 
@@ -124,7 +124,7 @@ class AxoStorage:
         if r2.is_err:
                 res = await self.storage.delete(bucket_id=bucket_id, key=expected_src_key)
                 if res.is_err:
-                    return Err(Exception(f"Failed to put {expected_attr_key}"))
+                    return Err(Exception(f"Failed to put {expected_attr_key}: {r2.unwrap_err()}"))
 
         return Ok(True)
 
@@ -146,11 +146,11 @@ class AxoStorage:
         if attrs_res.is_err:
             return Err(attrs_res.unwrap_err())
 
-        
    # fetch metadata per key (your new API)
         src_meta_res  = await self.storage.get_metadata(bucket_id=bucket_id, key=k_src)
         attr_meta_res = await self.storage.get_metadata(bucket_id=bucket_id, key=k_attr)
         if src_meta_res.is_err:
+            
             return Err(src_meta_res.unwrap_err())
         if attr_meta_res.is_err:
             return Err(attr_meta_res.unwrap_err())

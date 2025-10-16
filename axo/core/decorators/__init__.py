@@ -82,6 +82,9 @@ def axo_task(
     deserialize: DeserializeT = "bytes",
     ack: AckT = "delete",
     lease_seconds: int = 60,
+    ignore_ss:bool = True,
+    max_workers:int = 1,
+    max_balls:int = -1,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Decorate a method to consume **one** item from a bucket when invoked by the runtime.
@@ -96,6 +99,9 @@ def axo_task(
         deserialize   = deserialize,
         ack           = ack,
         lease_seconds = lease_seconds,
+        ignore_ss     = ignore_ss,
+        parallel      = max_workers,
+        max_items     = max_balls,
     )
 
     def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
@@ -235,11 +241,12 @@ def __axo_task(wrapped: Callable[..., R], ctx:AxoContext) -> Callable[..., Resul
             kwargs.setdefault("axo_bucket_id", instance.get_axo_bucket_id())
             kwargs.setdefault("axo_sink_bucket_id", instance.get_axo_sink_bucket_id())
             kwargs.setdefault("axo_source_bucket_id", instance.get_axo_source_bucket_id())
+            ctx.metadata = {**kwargs, **(ctx.metadata or {})}
             # is_distributed =  rt.get_is_distributed
             if not rt.is_distributed:
                 kwargs.setdefault("storage", rt.storage_service)
             if rt.is_distributed and instance._acx_local:
-                return Err(Exception("First you must persistify the object."))
+                return Err(Exception("Failed to execute task: First you must persistify the object."))
             
 
             fname:str = wrapped_func.__name__
@@ -248,7 +255,8 @@ def __axo_task(wrapped: Callable[..., R], ctx:AxoContext) -> Callable[..., Resul
             res = ep.task_execution(
                 fname = fname,
                 ao    = instance,
-                ctx   = ctx
+                ctx   = ctx,
+                # fkwargs = kwargs
             )
             print("RES",res)
             
@@ -288,6 +296,7 @@ def axo_method(wrapped: Callable[..., R]) -> Callable[..., Result[R, Exception]]
 
 
             e_id = kwargs.get("axo_endpoint_id", instance.get_endpoint_id()) 
+
             ep = rt.endpoint_manager.get_endpoint(e_id)
             
             instance.set_endpoint_id(ep.endpoint_id)
@@ -302,8 +311,10 @@ def axo_method(wrapped: Callable[..., R]) -> Callable[..., Result[R, Exception]]
                 kwargs.setdefault("storage", rt.storage_service)
             if rt.is_distributed and instance._acx_local:
                 return Err(Exception("First you must persistify the object."))
+            
             fname = wrapped_func.__name__
             print(instance.get_axo_bucket_id(), instance.get_axo_key())
+            
             res = ep.method_execution(
                 key     = instance.get_axo_key(),
                 fname   = fname,
@@ -311,6 +322,7 @@ def axo_method(wrapped: Callable[..., R]) -> Callable[..., Result[R, Exception]]
                 fargs   = args,
                 fkwargs = kwargs,
             )
+            
             # print("RES",res)
             logger.info({
                 "event": "METHOD.EXEC",

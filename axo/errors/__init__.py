@@ -42,5 +42,6 @@ def _default_code(et: AxoErrorType) -> int:
         AxoErrorType.NOT_LEADER:               AxoErrorCode.NOT_LEADER,
         AxoErrorType.TRANSPORT_ERROR:          AxoErrorCode.TRANSPORT_ERROR,
         AxoErrorType.INTERNAL_ERROR:           AxoErrorCode.INTERNAL_ERROR,
+        AxoErrorType.ENDPOINT_DEPLOY_FAILED:   AxoErrorCode.ENDPOINT_DEPLOY_FAILED,
     }
     return int(mapping.get(et, AxoErrorCode.INTERNAL_ERROR))

@@ -17,7 +17,6 @@ from axo.storage.loader import AxoLoader
 from axo.errors import AxoError,AxoErrorType
 from axo.types import EndpointManagerP
 from axo.log import get_logger
-from axo.storage.types import AxoObjectBlob, AxoObjectBlobs, AxoStorageMetadata
 from axo.storage.utils import StorageUtils as SU
 from axo.types import EndpointManagerP  # your protocol
 

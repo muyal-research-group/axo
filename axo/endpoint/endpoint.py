@@ -95,10 +95,10 @@ class EndpointX(ABC):
     # CRUD + RPC interface
     # ------------------------------------------------------------------ #
     @abstractmethod
-    def put(self, key: str, value: AxoStorageMetadata) -> Result[str, Exception]: ...
+    def put(self, key: str, value: AXOMODELS.MetadataX) -> Result[str, Exception]: ...
 
     @abstractmethod
-    def get(self, key: str) -> Result[AxoStorageMetadata, Exception]: ...
+    def get(self, key: str) -> Result[AXOMODELS.MetadataX, Exception]: ...
 
     @abstractmethod
     def method_execution(
@@ -159,14 +159,14 @@ class LocalEndpoint(EndpointX):
 
     def __init__(self, endpoint_id: str = "axo-endpoint-0") -> None:
         super().__init__(endpoint_id=endpoint_id)
-        self._db: Dict[str, AxoStorageMetadata] = {}
+        self._db: Dict[str, AXOMODELS.MetadataX] = {}
 
     # -- CRUD ------------------------------------------------------------
-    def put(self, key: str, value: AxoStorageMetadata) -> Result[str, Exception]:
+    def put(self, key: str, value: AXOMODELS.MetadataX) -> Result[str, Exception]:
         self._db.setdefault(key, value)
         return Ok(key)
 
-    def get(self, key: str) -> Result[AxoStorageMetadata, Exception]:
+    def get(self, key: str) -> Result[AXOMODELS.MetadataX, Exception]:
         return Ok(self._db[key]) if key in self._db else Err(Exception("Not found"))
 
     # -- Remote method execution (trivial in local mode) -----------------
@@ -343,7 +343,7 @@ class DistributedEndpoint(EndpointX):
     # ------------------------------------------------------------------ #
     # CRUD
     # ------------------------------------------------------------------ #
-    def put(self, key: str, value: AxoStorageMetadata) -> Result[str, Exception]:
+    def put(self, key: str, value: AXOMODELS.MetadataX) -> Result[str, Exception]:
         if not self._ensure_connection():
             return Err(Exception("Unable to connect"))
 
@@ -361,7 +361,7 @@ class DistributedEndpoint(EndpointX):
             self._cleanup()
             return Err(exc)
 
-    def get(self, key: str) -> Result[AxoStorageMetadata, Exception]:
+    def get(self, key: str) -> Result[AXOMODELS.MetadataX, Exception]:
         return Err(Exception("GET not implemented yet"))
 
     # ------------------------------------------------------------------ #

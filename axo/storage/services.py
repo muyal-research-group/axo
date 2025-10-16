@@ -4,8 +4,6 @@ import os
 import time as T
 from typing import Dict,Optional,List
 import tempfile
-from functools import reduce
-
 from nanoid import generate as nanoid
 from option import Err, Ok, Result
 import json as J

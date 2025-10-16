@@ -4,7 +4,7 @@ from pydantic import BaseModel,Field,field_validator,ConfigDict,model_validator
 from typing import ClassVar,Optional,List,Dict,Any,Tuple,Literal,Union,Iterable
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass,field
 # 
 from axo.helpers import _generate_id,_build_axo_uri
 from option import Ok, Err, Result
@@ -228,7 +228,7 @@ class MetadataX(BaseModel):
 DeserializeT = Literal["bytes", "json", "pickle"]
 AckT         = Union[Literal["delete"],Dict[str, Dict[str, str]]] 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class AxoContext:
     kind: Optional[Literal["method","task", "stream"]] = "task"
     source_bucket: Optional[str] = ""
@@ -251,6 +251,8 @@ class AxoContext:
     max_items: Optional[int] = None                # None => unlimited
     max_seconds: Optional[int] = None              # time budget per call
     ignore_ss:Optional[bool] = False # Ignore source and sink  this take the values of the active object
+    metadata:Optional[Dict[str,Any]] = field(default_factory=dict)
+    # Field(default={}) # Extra metadata for the run
 
 
 
